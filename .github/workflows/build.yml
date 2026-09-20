@@ -42,7 +42,7 @@ jobs:
         run: node tests/smoke.js
 
       - name: Build (${{ matrix.script }})
-        run: npm run ${{ matrix.script }}
+        run: npm run ${{ matrix.script }} -- --publish never
 
       - name: Upload installers
         uses: actions/upload-artifact@v4
