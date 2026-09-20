@@ -75,7 +75,7 @@ Built by **Zeeshan Qaswar**.
 | Platform | Get it | Install |
 | --- | --- | --- |
 | **Windows** | `dist/PolyVault-Setup-0.3.0.exe` | Run the NSIS installer. |
-| **Linux** | `dist/PolyVault-0.3.0-x86_64.AppImage` or `PolyVault-0.3.0-x64.deb` | AppImage: `chmod +x` then run. Deb: `sudo dpkg -i`. |
+| **Linux** | `dist/PolyVault-0.3.0-x86_64.AppImage` or `PolyVault-0.3.0-amd64.deb` | AppImage: `chmod +x` then run. Deb: `sudo dpkg -i`. |
 | **macOS** | build from source or grab the GitHub Actions artifacts (the DMG must be produced on a Mac) | Open the DMG, drag to Applications. |
 
 The Windows exe is **unsigned**, so SmartScreen may ask for *More info →

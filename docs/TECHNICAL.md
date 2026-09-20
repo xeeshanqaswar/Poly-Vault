@@ -391,7 +391,7 @@ deps, draws the gradient-diamond mark):
 | OS | electron-builder target | Artifact |
 | --- | --- | --- |
 | Windows | `nsis` (x64) | `dist/PolyVault-Setup-<ver>.exe` |
-| Linux | `AppImage` + `deb` (x64) | `dist/PolyVault-<ver>-x86_64.AppImage`, `PolyVault_<ver>_amd64.deb` |
+| Linux | `AppImage` + `deb` (x64) | `dist/PolyVault-<ver>-x86_64.AppImage`, `PolyVault-<ver>-amd64.deb` |
 | macOS | `dmg` + `zip` (x64 + arm64) | `dist/PolyVault-<ver>-{x64,arm64}.{dmg,zip}` |
 
 **Signing:**
