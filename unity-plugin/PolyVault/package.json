@@ -1,0 +1,19 @@
+{
+  "name": "com.polyvault.bridge",
+  "version": "0.3.0",
+  "displayName": "Poly Vault (Unity bridge)",
+  "description": "Unity 6 Editor bridge for the Poly Vault desktop app. Pulls import jobs from the local Poly Vault server and imports the queued assets into this project's Assets folder.",
+  "unity": "6000.0",
+  "keywords": [
+    "asset",
+    "library",
+    "import",
+    "manager",
+    "bridge",
+    "polyvault"
+  ],
+  "author": {
+    "name": "Zeeshan Qaswar",
+    "email": "zeeshan.qaswar@users.noreply.github.com"
+  }
+}

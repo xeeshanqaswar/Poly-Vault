@@ -1,0 +1,9 @@
+node_modules/
+dist/
+out/
+*.log
+data/
+build/*.ico
+build/*.png
+.DS_Store
+Thumbs.db

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' http://127.0.0.1:* http://localhost:* data:; style-src 'self' 'unsafe-inline'; connect-src 'self' http://127.0.0.1:* http://localhost:*;" />
+  <title>Poly Vault</title>
+  <link rel="icon" type="image/png" href="assets/icon.png" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="toolbar">
+      <div class="brand">
+        <img class="brand-mark" src="assets/logo.png" height="50" alt="Poly Vault" />
+      </div>
+      <div class="toolbar-actions">
+        <div class="search-wrap">
+          <input id="search" type="search" placeholder="Search assets..." autocomplete="off" />
+          <div class="filter-wrap">
+            <button id="btn-tag-filter" class="toolbar-btn" title="Filter assets by tags">
+              Tags <span id="filter-count" class="filter-count"></span>
+            </button>
+            <div id="tag-popover" class="popover hidden"></div>
+          </div>
+        </div>
+        <button id="btn-rescan" class="toolbar-btn" title="Re-scan libraries">Rescan</button>
+        <button id="btn-add-library" class="toolbar-btn primary" title="Add a folder that contains category subfolders">Add Library</button>
+        <select id="theme-select" class="theme-select" title="Theme" aria-label="Theme">
+          <option value="default">Default</option>
+          <option value="dark">Dark</option>
+          <option value="light">Light</option>
+        </select>
+        <div class="server-status" title="Local Unity bridge server">
+          <span id="server-dot" class="dot"></span>
+          <span id="server-state">connecting</span>
+        </div>
+        <div class="unity-status" title="Unity Editor project connection (active when the bridge is polling)">
+          <span id="unity-dot" class="dot"></span>
+          <span id="unity-state">unity: unknown</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside id="sidebar">
+        <div class="panel-title">Libraries</div>
+        <div id="lib-list" class="lib-list"></div>
+        <div id="sidebar-empty" class="empty-hint">
+          <p>No libraries yet.</p>
+          <p class="hint-sm">Add a folder with this layout:</p>
+          <pre>Assets
+  3d/
+    Chair/
+      preview.png
+      chair.fbx
+  2d/
+    Grass/
+      grass.jpg</pre>
+        </div>
+      </aside>
+
+      <div class="splitter" id="split-left" title="Drag to resize sidebar"></div>
+
+      <main id="main">
+        <div id="view-head">
+          <div id="breadcrumb" class="breadcrumb"></div>
+          <div id="tag-filter" class="tag-filter"></div>
+        </div>
+        <div id="grid-wrap">
+          <div id="grid" class="grid"></div>
+        </div>
+        <div id="empty-state" class="empty-state"></div>
+      </main>
+
+      <div class="splitter" id="split-right" title="Drag to resize details panel"></div>
+
+      <aside id="detail" class="detail">
+        <div id="detail-title" class="panel-title">Details</div>
+        <div id="detail-nobody" class="empty-hint">Select a library, folder, or asset to see details.</div>
+        <div id="detail-content" class="detail-content hidden"></div>
+      </aside>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

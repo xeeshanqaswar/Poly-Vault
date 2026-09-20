@@ -1,0 +1,79 @@
+appId: com.polyvault.app
+productName: Poly Vault
+directories:
+  output: dist
+  buildResources: build
+
+files:
+  - src/**/*
+  - ui/**/*
+  - package.json
+
+asar: true
+
+# Keep runtime deps minimal (none needed beyond Electron itself).
+npmRebuild: false
+
+# ------------------------------------------------------------------
+# Windows
+# ------------------------------------------------------------------
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+  executableName: Poly Vault
+
+nsis:
+  oneClick: false
+  perMachine: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Poly Vault
+  artifactName: PolyVault-Setup-${version}.${ext}
+  deleteAppDataOnUninstall: false
+
+# ------------------------------------------------------------------
+# Linux
+# ------------------------------------------------------------------
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+  icon: build/icon.png
+  executableName: poly-vault
+  artifactName: PolyVault-${version}-${arch}.${ext}
+  category: Graphics;3DGraphics
+  synopsis: Local asset manager with a Unity import pipeline
+  description: Browse local 3D/2D asset libraries and import them into Unity 6.
+  maintainer: Zeeshan Qaswar <zeeshan.qaswar@users.noreply.github.com>
+  syncDesktopName: true
+
+# ------------------------------------------------------------------
+# macOS
+# ------------------------------------------------------------------
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+    - target: zip
+      arch:
+        - x64
+        - arm64
+  icon: build/icon.icns
+  executableName: Poly Vault
+  artifactName: PolyVault-${version}-${arch}.${ext}
+  category: public.app-category.graphics-design
+  darkModeSupport: true
+  identity: null
+
+dmg:
+  artifactName: PolyVault-${version}-${arch}.${ext}
