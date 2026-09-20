@@ -3,13 +3,13 @@
 **Your personal 3D & 2D asset library — with a one-click pipeline into Unity 6.**
 
 <p>
-  <a href="https://github.com/zeeshanqaswar/poly-vault"><img src="https://img.shields.io/badge/project-Poly%20Vault-1f6feb" alt="Project"></a>
-  <a href="https://github.com/zeeshanqaswar/poly-vault/releases"><img src="https://img.shields.io/badge/version-0.3.0-1f6feb" alt="Version"></a>
+  <a href="https://github.com/xeeshanqaswar/Poly-Vault"><img src="https://img.shields.io/badge/project-Poly%20Vault-1f6feb" alt="Project"></a>
+  <a href="https://github.com/xeeshanqaswar/Poly-Vault/releases"><img src="https://img.shields.io/badge/version-0.3.0-1f6feb" alt="Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-793700" alt="Platforms">
-  <a href="https://github.com/zeeshanqaswar/poly-vault/actions"><img src="https://img.shields.io/badge/CI-GitHub%20Actions-2b7489" alt="CI"></a>
+  <a href="https://github.com/xeeshanqaswar/Poly-Vault/actions"><img src="https://img.shields.io/badge/CI-GitHub%20Actions-2b7489" alt="CI"></a>
   <img src="https://img.shields.io/badge/tests-smoke%20%2B%20e2e-passing-brightgreen" alt="Tests">
-  <a href="https://github.com/zeeshanqaswar/poly-vault/issues"><img src="https://img.shields.io/badge/help-issues-yellow" alt="Issues"></a>
+  <a href="https://github.com/xeeshanqaswar/Poly-Vault/issues"><img src="https://img.shields.io/badge/help-issues-yellow" alt="Issues"></a>
 </p>
 
 Poly Vault turns any folder on your computer into a beautiful, browsable asset
