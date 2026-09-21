@@ -1,5 +1,9 @@
 # Poly Vault
 
+<p align="center">
+  <img src="branding/logo-horizontal.png" alt="Poly Vault" width="400" />
+</p>
+
 **Your personal 3D & 2D asset library — with a one-click pipeline into Unity 6.**
 
 <p>
@@ -23,7 +27,9 @@ Built by **Zeeshan Qaswar**.
 
 ## Table of contents
 
+- [Table of contents](#table-of-contents)
 - [Highlights](#highlights)
+- [Screenshot](#screenshot)
 - [Quick start](#quick-start)
 - [How the app works](#how-the-app-works)
 - [Folder layout convention](#folder-layout-convention)
@@ -65,6 +71,16 @@ Built by **Zeeshan Qaswar**.
 > **New in 0.3** — the app is now called **Poly Vault** (it was "Asset Vault").
 > Your existing libraries, tags, and descriptions are carried over
 > automatically on first launch.
+
+---
+
+## Screenshot
+
+<p align="center">
+  <img src="docs/assets/screenshot.png" alt="Poly Vault — browsing a 3D/2D asset library" width="720" />
+  <br/>
+  <em>Poly Vault 0.3 — library tree, preview cards, and the details panel.</em>
+</p>
 
 ---
 
