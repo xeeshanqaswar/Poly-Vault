@@ -57,6 +57,15 @@ linux:
 
 # ------------------------------------------------------------------
 # macOS
+#
+# Signing & notarization:
+#  - No `identity: null` — when a Developer ID cert is present electron-builder
+#    signs with it automatically; without one it falls back to ad-hoc signing
+#    (local/dev builds only). Gatekeeper trust requires a signed + notarized
+#    build (see CI secrets below and AGENTS.md).
+#  - Hardened runtime + entitlements are required for notarization to pass.
+#  - `notarize` stays off by default and is enabled in CI (override with
+#    --config.mac.notarize=true) only when Apple credentials are configured.
 # ------------------------------------------------------------------
 mac:
   target:
@@ -73,7 +82,11 @@ mac:
   artifactName: PolyVault-${version}-${arch}.${ext}
   category: public.app-category.graphics-design
   darkModeSupport: true
-  identity: null
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  notarize: false
 
 dmg:
   artifactName: PolyVault-${version}-${arch}.${ext}

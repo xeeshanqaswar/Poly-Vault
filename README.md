@@ -95,9 +95,11 @@ Built by **Zeeshan Qaswar**.
 | **macOS** | build from source or grab the GitHub Actions artifacts (the DMG must be produced on a Mac) | Open the DMG, drag to Applications. |
 
 The Windows exe is **unsigned**, so SmartScreen may ask for *More info →
-Run anyway* the first time. On macOS, first launch may need
-*System Settings → Privacy & Security → Open Anyway*. See
-[Packaging & signing](docs/TECHNICAL.md#packaging--signing) for signed builds.
+Run anyway* the first time. macOS builds are **signed and notarized only when
+Apple credentials are configured** in CI (see below); until then, an unsigned
+build triggers Gatekeeper — either right-click the app and choose **Open**, or
+run `xattr -dr com.apple.quarantine /Applications/Poly\ Vault.app` from a
+terminal. See [Packaging & signing](docs/TECHNICAL.md#packaging--signing).
 
 ### Option B — run from source
 

@@ -41,7 +41,18 @@ jobs:
       - name: Run headless tests
         run: node tests/smoke.js
 
+      - name: Build (macOS — sign + notarize when credentials are set)
+        if: matrix.os == 'macos-latest'
+        env:
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: npm run dist:mac -- --publish never --config.mac.notarize=${{ (secrets.APPLE_ID != '' && secrets.APPLE_APP_SPECIFIC_PASSWORD != '') && 'true' || 'false' }}
+
       - name: Build (${{ matrix.script }})
+        if: matrix.os != 'macos-latest'
         run: npm run ${{ matrix.script }} -- --publish never
 
       - name: Upload installers

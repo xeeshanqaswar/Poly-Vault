@@ -400,10 +400,24 @@ deps, draws the gradient-diamond mark):
   `CSC_LINK`/`CSC_KEY_PASSWORD` (or `win.certificateFile`/`Password`).
 - Linux packages need no signing, but `deb` is easiest to install with
   `sudo dpkg -i` on Debian/Ubuntu.
-- macOS is configured with `identity: null` — **unsigned**. DMG creation
-  requires macOS tooling (`hdiutil`), so `npm run dist:mac` must run on a Mac.
-  For signed+notarised distribution, install Apple Developer certificates in
-  the keychain, remove `identity: null`, and add `mac.notarize`.
+- macOS builds use **hardened runtime + entitlements**
+  (`build/entitlements.mac.plist`) and are **signed + notarized when Apple
+  credentials are present**. Requirements:
+  - A paid [Apple Developer Program](https://developer.apple.com/programs/)
+    membership with a **Developer ID Application** certificate.
+  - Notarization needs an **app-specific password** for `APPLE_ID` and your
+    `APPLE_TEAM_ID` (Apple account → *App-specific passwords*).
+  - Without credentials, electron-builder falls back to **ad-hoc signing**
+    (`identity: null` is no longer forced — auto-discovery signs with any
+    installed Developer ID cert). Ad-hoc builds trigger Gatekeeper:
+    right-click → Open, or `xattr -dr com.apple.quarantine` the `.app`.
+  - In CI (`build.yml`), the macOS job injects `CSC_LINK`,
+    `CSC_KEY_PASSWORD` (base64 p12), `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`,
+    and `APPLE_TEAM_ID` as **repo secrets** and only enables
+    `--config.mac.notarize=true` when the Apple ID credentials exist. Set
+    those secrets and tagged builds come out notarized — no Gatekeeper warning.
+  - DMG creation still requires macOS tooling (`hdiutil`), so
+    `npm run dist:mac` must run on a Mac (CI covers this).
 
 **Cross-platform notes:** AppImage files embed the host-OS glibc; build them
 on your oldest supported distro or rely on `APPIMAGE_EXTRACT_AND_RUN=1`.

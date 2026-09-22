@@ -155,5 +155,21 @@ only thing worth a question).
 - Icons come from `branding/` via `npm run icons` (`build/icon.ico|png|icns`, `ui/assets/*`).
 - Linux `deb` artifact is `PolyVault-<ver>-amd64.deb` (Debian amd64 naming), AppImage is
   `PolyVault-<ver>-x86_64.AppImage`.
-- macOS DMG/zip are unsigned (`identity: null`); producing them requires a Mac — CI covers this.
+- Electron-builder **must not publish** — builds pass `--publish never`; releases are assembled
+  via the GitHub API (assets uploaded with curl; PowerShell `Invoke-RestMethod` gets HTTP 400).
 - AppImage cannot be built on Windows (`mksquashfs` missing) — always use CI for Linux/macOS.
+
+## macOS signing & notarization (Gatekeeper)
+
+Unsigned builds trigger: *"Apple cannot verify… / developer cannot be verified"* and *"not
+supported on future macOS"* warnings. Fix = Developer ID signing + notarization.
+
+- `electron-builder.yml`: `hardenedRuntime: true`, `gatekeeperAssess: false`, entitlements
+  `build/entitlements.mac.plist`, `notarize` default off. No `identity: null` — auto-discovery
+  signs with an installed Developer ID cert, else ad-hoc.
+- CI (`build.yml` macOS job) reads these **repo secrets** and enables `mac.notarize`
+  automatically when `APPLE_ID` + `APPLE_APP_SPECIFIC_PASSWORD` are set:
+  `MAC_CSC_LINK` (base64 of Developer ID cert p12), `MAC_CSC_KEY_PASSWORD`,
+  `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`.
+- Requires Apple Developer Program membership. Without credentials CI still builds (ad-hoc);
+  document workarounds: right-click → Open, or `xattr -dr com.apple.quarantine <App>`.
