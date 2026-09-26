@@ -2,6 +2,7 @@ node_modules/
 dist/
 out/
 .release/
+graphify-out/
 *.log
 data/
 build/*.ico

@@ -173,3 +173,39 @@ supported on future macOS"* warnings. Fix = Developer ID signing + notarization.
   `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`.
 - Requires Apple Developer Program membership. Without credentials CI still builds (ad-hoc);
   document workarounds: right-click → Open, or `xattr -dr com.apple.quarantine <App>`.
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+When the user types `/graphify`, use the installed graphify skill or instructions before doing anything else.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+
+### Poly Vault specifics (mandatory)
+
+- **Every code modification must refresh the graph in the same session**: run `graphify update .` right
+  after the last edit of a task, before reporting completion. A task is not done while the graph is stale.
+- Refresh the graph with `--force` when a refactor deletes code (`graphify update . --force`), otherwise
+  the rebuild is skipped as a possible regression.
+- `graphify` is **not on the machine PATH** by default. Bootstrap every session with the standard PATH
+  refresh plus `"$env:USERPROFILE\.local\bin"` appended, or call
+  `& "$env:USERPROFILE\.local\bin\graphify.exe"`.
+- No LLM API key is configured on this machine, so **always pass `--code-only`**:
+  - first build: `graphify extract . --code-only` then `graphify cluster-only . --no-label`
+  - incremental: `graphify update .`
+  - `cluster-only` without `--no-label` fails trying to auto-detect a backend.
+- `graphify-out/` is gitignored (generated, ~0.8 MB per build). Do not force-add it. On a fresh clone,
+  build it once with the first-build command above. `.opencode/` **is** committed (skill + plugin), so the
+  graphify reminder and instructions travel with the repo.
+- `graphify hook install` already put a `post-commit` + `post-checkout` rebuild in `.git/hooks` (local,
+  not committed) and registered a `graphify` union merge driver for `graph.json`. After a pull that touched
+  code, run `graphify update .` to pick up the merged state.
+- Use the graph to save tokens: prefer `graphify query` / `path` / `explain` / `affected` / `god-nodes`
+  over grepping or reading whole files. `graphify affected "<symbol>"` is the fast way to find every call
+  site that a change touches (e.g. before renaming an IPC channel or a bridge route).
