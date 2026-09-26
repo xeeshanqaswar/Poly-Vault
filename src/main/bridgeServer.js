@@ -89,6 +89,28 @@ function withinLibrary(pathToCheck, libraries) {
   });
 }
 
+function normalizeTagList(value) {
+  if (!Array.isArray(value)) return [];
+  const out = [];
+  const seen = new Set();
+  for (const t of value) {
+    const s = String(t).trim().toLowerCase();
+    if (s && !seen.has(s)) {
+      seen.add(s);
+      out.push(s);
+    }
+  }
+  return out;
+}
+
+function sanitizeScope(raw) {
+  const types = ['all', 'library', 'container', 'asset'];
+  const scope = { type: raw && types.includes(raw.type) ? raw.type : 'all' };
+  if (raw && raw.libId) scope.libId = String(raw.libId);
+  if (raw && raw.rel) scope.rel = String(raw.rel);
+  return scope;
+}
+
 /**
  * Local HTTP bridge. Serves reading the library, previews, tags, and the
  * import-job queue consumed by the Unity Editor plugin.
@@ -96,9 +118,11 @@ function withinLibrary(pathToCheck, libraries) {
  * getState() => { name, version, libraries: [{id,name,path}], jobs: Job[] }
  * tags      => { getAll(): { [absPath]: string[] }, set(absPath, tags): string[] }
  * meta      => { getAll(): { [absPath]: { description: string } }, set(absPath, description): string }
+ * enrichment=> { request([{path,name}]): number, status(): {state,pending,active,done,message} }
+ * update    => { run(scope): Promise<{libraries, targets:[{path,name}]}> }
  * onJobsChanged(jobs) => called whenever the job queue is mutated (cheap to persist).
  */
-function startBridge({ host = '127.0.0.1', port = 7100, getState, tags, meta, onJobsChanged, onDiag }) {
+function startBridge({ host = '127.0.0.1', port = 7100, getState, tags, meta, onJobsChanged, onDiag, enrichment, update }) {
   let lastUnitySeen = 0; // epoch ms of the last /api/unity/* request (Unity plugin poll)
   const server = http.createServer(async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -145,10 +169,43 @@ function startBridge({ host = '127.0.0.1', port = 7100, getState, tags, meta, on
           return entry && entry.description ? entry.description : '';
         };
         const rescanned = libs.map((lib) => scanLibrary(lib, { getTags: getTagsFor, getMeta: getMetaFor }));
+        if (enrichment && enrichment.request) {
+          const fresh = [];
+          for (const lib of rescanned) {
+            for (const a of lib.assets || []) fresh.push({ path: a.folder, name: a.name });
+          }
+          if (fresh.length) enrichment.request(fresh);
+        }
         sendJson(res, 200, {
           ok: true,
           libraries: rescanned,
           serverTime: new Date().toISOString(),
+        });
+        return;
+      }
+
+      if (req.method === 'GET' && route === '/api/enrichment') {
+        const status = enrichment && enrichment.status ? enrichment.status() : { state: 'idle', pending: 0, active: 0, done: 0, message: '' };
+        sendJson(res, 200, { ok: true, status });
+        return;
+      }
+
+      if (req.method === 'POST' && route === '/api/update') {
+        const body = await readBody(req);
+        const scope = sanitizeScope(body && body.scope);
+        if (!update || typeof update.run !== 'function') {
+          sendJson(res, 400, { ok: false, error: 'update not wired' });
+          return;
+        }
+        const result = await update.run(scope);
+        if (enrichment && enrichment.request && Array.isArray(result.targets)) {
+          enrichment.request(result.targets, { force: true });
+        }
+        sendJson(res, 200, {
+          ok: true,
+          libraries: result.libraries,
+          targets: result.targets,
+          status: enrichment && enrichment.status ? enrichment.status() : null,
         });
         return;
       }
@@ -206,6 +263,47 @@ function startBridge({ host = '127.0.0.1', port = 7100, getState, tags, meta, on
         }
         const saved = tags.set(target, list.slice(0, 64));
         sendJson(res, 200, { ok: true, path: target, tags: saved });
+        return;
+      }
+
+      if (req.method === 'POST' && route === '/api/tags/apply') {
+        const body = await readBody(req);
+        const paths = (Array.isArray(body.paths) ? body.paths : []).map((p) => String(p)).filter(Boolean);
+        if (!paths.length || !tags || !tags.applyBulk) {
+          sendJson(res, 400, { ok: false, error: 'missing paths' });
+          return;
+        }
+        for (const p of paths) {
+          if (!withinLibrary(p, libs)) {
+            sendJson(res, 403, { ok: false, error: 'path outside libraries' });
+            return;
+          }
+        }
+        const add = normalizeTagList(body.add);
+        const remove = new Set(normalizeTagList(body.remove));
+        const all = tags.getAll ? tags.getAll() : {};
+        const entries = [];
+        for (const p of paths) {
+          const current = all[path.resolve(p)];
+          const base = Array.isArray(current) ? current : [];
+          const list = [];
+          const seen = new Set();
+          for (const t of base) {
+            if (!remove.has(t) && !seen.has(t)) {
+              seen.add(t);
+              list.push(t);
+            }
+          }
+          for (const t of add) {
+            if (!seen.has(t)) {
+              seen.add(t);
+              list.push(t);
+            }
+          }
+          entries.push({ path: p, tags: list.slice(0, 64) });
+        }
+        const count = tags.applyBulk(entries);
+        sendJson(res, 200, { ok: true, count });
         return;
       }
 

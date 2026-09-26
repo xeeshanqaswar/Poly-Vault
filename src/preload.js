@@ -7,4 +7,6 @@ contextBridge.exposeInMainWorld('assetVault', {
   removeLibrary: (id) => ipcRenderer.invoke('assetvault:removeLibrary', id),
   getState: () => ipcRenderer.invoke('assetvault:getState'),
   getServerInfo: () => ipcRenderer.invoke('assetvault:getServerInfo'),
+  openInExplorer: (targetPath) => ipcRenderer.invoke('assetvault:openPath', targetPath),
+  fetchUnityDescription: (name) => ipcRenderer.invoke('assetvault:fetchUnityDescription', name),
 });

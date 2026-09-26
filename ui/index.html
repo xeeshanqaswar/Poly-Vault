@@ -24,7 +24,10 @@
             <div id="tag-popover" class="popover hidden"></div>
           </div>
         </div>
-        <button id="btn-rescan" class="toolbar-btn" title="Re-scan libraries">Rescan</button>
+        <div class="update-wrap">
+          <button id="btn-update" class="toolbar-btn" title="Scan for changes and fetch missing descriptions for the selected library, folder, or asset">Update</button>
+          <span id="update-status" class="update-status"></span>
+        </div>
         <button id="btn-add-library" class="toolbar-btn primary" title="Add a folder that contains category subfolders">Add Library</button>
         <select id="theme-select" class="theme-select" title="Theme" aria-label="Theme">
           <option value="default">Default</option>
@@ -44,7 +47,10 @@
 
     <div class="layout">
       <aside id="sidebar">
-        <div class="panel-title">Libraries</div>
+        <div class="sidebar-head">
+          <div class="panel-title">Libraries</div>
+          <button id="btn-collapse-all" class="collapse-all" title="Collapse all folders">Collapse all</button>
+        </div>
         <div id="lib-list" class="lib-list"></div>
         <div id="sidebar-empty" class="empty-hint">
           <p>No libraries yet.</p>

@@ -31,11 +31,21 @@ function el(tag, className, text, title) {
   return node;
 }
 
-// Inline SVG set (stroke/fill via currentColor so themes just work).
+// Inline lucide.dev icons (stroke/fill via currentColor so themes just work).
 const ICONS = {
-  chevron: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  folder: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7A2.5 2.5 0 0 1 6 4.5h3l2 2.2h7a2.5 2.5 0 0 1 2.5 2.5V17a2.5 2.5 0 0 1-2.5 2.5h-12A2.5 2.5 0 0 1 3.5 17V7z" fill="currentColor"/></svg>',
-  cube: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l7.6 4.3v9.8L12 21.2l-7.6-4.3V7.1L12 2.8zM4.6 7.6l7.4 4.2 7.4-4.2M12 11.8v9.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  chevron: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',
+  chevronsUp: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 11-5-5-5 5"/><path d="m17 18-5-5-5 5"/></svg>',
+  folder: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>',
+  folderOpen: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>',
+  cube: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>',
+  search: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 21-4.34-4.34"/></svg>',
+  refresh: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>',
+  plus: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>',
+  x: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
+  sparkles: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/></svg>',
+  pencil: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>',
+  check: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  tag: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/></svg>',
 };
 
 function iconSpan(name, cls) {
@@ -44,6 +54,13 @@ function iconSpan(name, cls) {
   s.setAttribute('aria-hidden', 'true');
   s.innerHTML = ICONS[name] || '';
   return s;
+}
+
+function iconBtn(cls, icon, label) {
+  const b = el('button', cls);
+  b.appendChild(iconSpan(icon, 'btn-icon'));
+  if (label) b.appendChild(el('span', 'btn-label', label));
+  return b;
 }
 
 let lastDataSig = null;
@@ -71,6 +88,21 @@ function fmtDate(iso) {
 }
 
 const nodeKey = (libId, rel) => `${libId}::${rel}`;
+
+function expandAllLibraries() {
+  for (const lib of state.libraries) {
+    state.expanded.add(`lib::${lib.id}`);
+    const expandAll = (nodes) => {
+      for (const node of nodes || []) {
+        if (node.type === 'container') {
+          state.expanded.add(nodeKey(lib.id, node.rel));
+          expandAll(node.children);
+        }
+      }
+    };
+    expandAll(lib.tree);
+  }
+}
 
 // ---------- theme ----------
 
@@ -156,7 +188,8 @@ function setServerState(online) {
   state.online = online;
   $('#server-dot').className = `dot ${online ? 'online' : 'offline'}`;
   $('#server-state').textContent = online ? 'bridge: online' : 'bridge: offline';
-  $('#btn-rescan').disabled = !online;
+  const b = $('#btn-update');
+  if (b) b.disabled = !online;
   renderUnityState();
 }
 
@@ -202,6 +235,22 @@ async function schedule() {
   setInterval(pollUnityStatus, 5000);
 }
 
+async function loadPeripherals() {
+  const tagsRes = await fetch(`${state.serverUrl}/api/tags`);
+  const tagsJson = await tagsRes.json();
+  const tagData = tagsJson.ok ? tagsJson.tags || {} : {};
+  const metaRes = await fetch(`${state.serverUrl}/api/meta`);
+  const metaJson = await metaRes.json();
+  const rawMeta = metaJson.ok ? metaJson.meta || {} : {};
+  const metaMap = {};
+  for (const k of Object.keys(rawMeta)) {
+    const v = rawMeta[k];
+    metaMap[k] = typeof v === 'string' ? v : (v && v.description) || '';
+  }
+  state.tagData = tagData;
+  state.metaData = metaMap;
+}
+
 async function refreshLibrary() {
   if (!state.serverUrl) return;
   try {
@@ -209,39 +258,15 @@ async function refreshLibrary() {
     const json = await res.json();
     if (!json.ok) throw new Error(json.error || 'bad response');
     state.libraries = json.libraries || [];
-    const tagsRes = await fetch(`${state.serverUrl}/api/tags`);
-    const tagsJson = await tagsRes.json();
-    state.tagData = tagsJson.ok ? tagsJson.tags || {} : {};
-    const metaRes = await fetch(`${state.serverUrl}/api/meta`);
-    const metaJson = await metaRes.json();
-    const rawMeta = metaJson.ok ? metaJson.meta || {} : {};
-    const metaMap = {};
-    for (const k of Object.keys(rawMeta)) {
-      const v = rawMeta[k];
-      metaMap[k] = typeof v === 'string' ? v : (v && v.description) || '';
-    }
+    await loadPeripherals();
 
     // scannedAt / serverTime change on every polling round; ignore them.
     const cleanLibraries = state.libraries.map((l) => ({ ...l, scannedAt: undefined }));
-    const sig = JSON.stringify([cleanLibraries, state.tagData, metaMap]);
+    const sig = JSON.stringify([cleanLibraries, state.tagData, state.metaData]);
     const unchanged = sig === lastDataSig;
-    state.metaData = metaMap;
     lastDataSig = sig;
 
-    if (state.expanded.size === 0) {
-      for (const lib of state.libraries) {
-        state.expanded.add(`lib::${lib.id}`);
-        const expandAll = (nodes) => {
-          for (const node of nodes || []) {
-            if (node.type === 'container') {
-              state.expanded.add(nodeKey(lib.id, node.rel));
-              expandAll(node.children);
-            }
-          }
-        };
-        expandAll(lib.tree);
-      }
-    }
+    if (state.expanded.size === 0) expandAllLibraries();
 
     setServerState(true);
 
@@ -404,8 +429,9 @@ function renderSidebar() {
     head.appendChild(el('span', 'name', lib.name));
     head.appendChild(el('span', 'count', `${total || ''}`));
     if (lib.missing) head.appendChild(el('span', 'missing', 'path missing'));
-    const rem = el('button', 'remove', '\u00D7', 'Remove library');
+    const rem = el('button', 'remove', null, 'Remove library');
     rem.setAttribute('aria-label', `Remove library ${lib.name}`);
+    rem.appendChild(iconSpan('x'));
     rem.addEventListener('click', async (e) => {
       e.stopPropagation();
       await assetVault.removeLibrary(lib.id);
@@ -634,7 +660,7 @@ function renderTagPopover() {
   pop.innerHTML = '';
   const tags = allTagsInView();
   if (!tags.length) {
-    pop.appendChild(el('div', 'popover-empty', 'No tags yet \u2014 add tags from an asset\u2019s details.'));
+    pop.appendChild(el('div', 'popover-empty', 'No tags yet \u2014 add tags from any item\u2019s details.'));
     return;
   }
   const visible = assetsFiltered(false);
@@ -825,52 +851,272 @@ function buildKindPills(kindCounts) {
   return wrap;
 }
 
-function buildReadonlyTags(tags) {
-  const wrap = el('div', 'detail-tags readonly-tags');
-  for (const t of (tags || []).slice(0, 40)) {
-    const chip = el('span', 'tag-chip' + (state.activeTags.has(t) ? ' active' : ''), t);
-    chip.addEventListener('click', () => toggleTag(t));
-    wrap.appendChild(chip);
+function collectAssetPaths(node, out = []) {
+  if (node.type === 'asset') out.push(node.path);
+  else for (const c of (node.children || [])) collectAssetPaths(c, out);
+  return out;
+}
+
+// Every tag currently in the app — useful for the suggestion dropdown.
+function globalTagSet() {
+  const set = new Set();
+  for (const lib of state.libraries) for (const t of lib.tags || []) set.add(t);
+  for (const k in state.tagData) for (const t of state.tagData[k] || []) set.add(t);
+  return Array.from(set).sort();
+}
+
+// Adds/removes tags on any number of absolute paths in one request (used by
+// the tag editor so a folder/library assignment cascades to its assets).
+async function applyTagsBulk(paths, add, remove) {
+  if (!paths.length) return false;
+  try {
+    const res = await fetch(`${state.serverUrl}/api/tags/apply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paths, add: add || [], remove: remove || [] }),
+    });
+    const json = await res.json();
+    if (!json.ok) return false;
+    const tagsRes = await fetch(`${state.serverUrl}/api/tags`);
+    const tagsJson = await tagsRes.json();
+    if (tagsJson.ok) state.tagData = tagsJson.tags || {};
+    return true;
+  } catch (_) {
+    return false;
   }
-  if ((tags || []).length > 40) wrap.appendChild(el('span', 'sub', `+${tags.length - 40} more`));
+}
+
+function buildTagEditor(target) {
+  const wrap = el('div', 'detail-tags');
+  const chipsWrap = el('div', 'tag-chips');
+  const insideWrap = el('div', 'tag-inside');
+  const actionsWrap = el('div', 'tag-actions');
+  const row = el('div', 'tag-add-row');
+  const input = el('input');
+  input.type = 'text';
+  input.placeholder = 'add a tag\u2026';
+  const box = el('div', 'tag-suggest');
+  let cascade = target.canCascade; // folders/libraries cascade to descendants by default
+
+  const cur = () => state.tagData[target.path] || [];
+
+  const apply = async ({ add, remove }) => {
+    const paths = cascade ? [target.path, ...target.assetPaths] : [target.path];
+    const ok = await applyTagsBulk(paths, add, remove);
+    renderChips();
+    renderSuggest();
+    refresh();
+    return ok;
+  };
+
+  // Tags used by the items inside a folder/library. They belong to the
+  // descendants, so they are shown (and filterable) but not editable here.
+  const renderInside = () => {
+    insideWrap.innerHTML = '';
+    const own = new Set(cur());
+    const inside = Array.from(new Set(target.insideTags || [])).filter((t) => !own.has(t));
+    if (!inside.length) return;
+    const shown = inside.slice(0, 12);
+    insideWrap.appendChild(el('span', 'tag-inside-label', `inside (${inside.length})`));
+    for (const t of shown) {
+      const chip = el('span', `detail-tag inside${state.activeTags.has(t) ? ' active' : ''}`, t);
+      chip.title = `Filter by "${t}"`;
+      chip.addEventListener('click', () => toggleTag(t));
+      insideWrap.appendChild(chip);
+    }
+    if (inside.length > shown.length) {
+      insideWrap.appendChild(el('span', 'tag-inside-more', `+${inside.length - shown.length} more`));
+    }
+  };
+
+  const renderChips = () => {
+    chipsWrap.innerHTML = '';
+    for (const t of cur()) {
+      const chip = el('span', 'detail-tag' + (state.activeTags.has(t) ? ' active' : ''), t);
+      chip.addEventListener('click', () => toggleTag(t));
+      const rm = el('button', '', null, `remove tag "${t}"`);
+      rm.setAttribute('aria-label', `Remove tag "${t}"`);
+      rm.appendChild(iconSpan('x'));
+      rm.addEventListener('click', (e) => {
+        e.stopPropagation();
+        apply({ remove: [t] });
+      });
+      chip.appendChild(rm);
+      chipsWrap.appendChild(chip);
+    }
+    renderInside();
+  };
+
+  const renderActions = () => {
+    actionsWrap.innerHTML = '';
+    if (target.canCascade && target.assetPaths.length) {
+      const tgl = el('button', 'cascade-toggle' + (cascade ? ' on' : ''),
+        `Cascade to ${target.assetPaths.length} items inside`);
+      tgl.title = cascade
+        ? 'Tagging applies to this item and everything inside it'
+        : 'Tagging applies only to this item';
+      tgl.addEventListener('click', () => {
+        cascade = !cascade;
+        renderActions();
+      });
+      actionsWrap.appendChild(tgl);
+    }
+  };
+
+  const renderSuggest = () => {
+    box.innerHTML = '';
+    const q = input.value.trim().toLowerCase();
+    if (!q) return;
+    const own = new Set(cur());
+    const matches = globalTagSet().filter((t) => t.includes(q) && !own.has(t)).slice(0, 8);
+    if (!matches.length) return;
+    for (const m of matches) {
+      const item = el('button', 'tag-suggest-item', m);
+      item.addEventListener('click', () => {
+        doAdd(m);
+      });
+      box.appendChild(item);
+    }
+  };
+
+  const doAdd = (v) => {
+    const name = String(v).trim().toLowerCase();
+    if (!name) return;
+    if (!cur().includes(name)) apply({ add: [name] });
+    input.value = '';
+    renderSuggest();
+  };
+
+  input.addEventListener('input', renderSuggest);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      doAdd(input.value);
+    }
+  });
+  const add = el('button', '', null, 'Add tag');
+  add.setAttribute('aria-label', 'Add tag');
+  add.appendChild(iconSpan('plus', 'btn-icon'));
+  add.addEventListener('click', () => {
+    add.blur();
+    doAdd(input.value);
+  });
+  row.appendChild(input);
+  row.appendChild(add);
+
+  wrap.appendChild(chipsWrap);
+  wrap.appendChild(insideWrap);
+  wrap.appendChild(actionsWrap);
+  wrap.appendChild(row);
+  wrap.appendChild(box);
+  renderChips();
+  renderActions();
   return wrap;
 }
 
 function buildDescriptionEditor(targetPath) {
   const wrap = el('div', 'desc-editor');
-  wrap.appendChild(el('div', 'detail-section-title', 'Description'));
-  const ta = el('textarea');
-  ta.placeholder = 'Add a description\u2026';
-  ta.value = state.metaData[targetPath] || '';
-  const status = el('div', 'desc-status', '');
-  wrap.appendChild(ta);
-  wrap.appendChild(status);
+  const head = el('div', 'desc-head');
+  head.appendChild(el('div', 'detail-section-title', 'Description'));
 
-  const before = (state.metaData[targetPath] || '').trim();
-  const save = () => {
-    const value = ta.value.trim();
-    if (value === before) {
-      status.textContent = '';
+  const actions = el('div', 'desc-actions');
+  const editBtn = iconBtn('desc-btn', 'pencil', 'Edit');
+  const doneBtn = iconBtn('desc-btn primary', 'check', 'Save');
+  actions.appendChild(editBtn);
+  actions.appendChild(doneBtn);
+  head.appendChild(actions);
+  wrap.appendChild(head);
+
+  const view = el('div', 'desc-view');
+  const ta = el('textarea', 'desc-input');
+  ta.placeholder = 'Add a description\u2026';
+  const status = el('div', 'desc-status', '');
+
+  const text = () => state.metaData[targetPath] || '';
+  // An empty description opens straight into edit mode so filling it in is
+  // the obvious first step (enrichment happens in the main process).
+  let editing = !text();
+
+  const applyMode = () => {
+    if (editing) {
+      view.classList.add('hidden');
+      ta.classList.remove('hidden');
+      doneBtn.classList.remove('hidden');
+      editBtn.classList.add('hidden');
+      ta.focus();
+    } else {
+      ta.classList.add('hidden');
+      doneBtn.classList.add('hidden');
+      editBtn.classList.remove('hidden');
+      const t = text();
+      if (t) view.textContent = t;
+      else view.innerHTML = '<span class="desc-placeholder">No description yet\u2026</span>';
+      view.classList.remove('hidden');
+    }
+  };
+
+  const setStatus = (msg, ok) => {
+    status.textContent = msg || '';
+    status.classList.toggle('ok', !!ok);
+    status.classList.toggle('bad', ok === false);
+  };
+
+  const save = async () => {
+    const current = text();
+    const next = ta.value.trim();
+    if (next === current) {
+      editing = false;
+      applyMode();
+      setStatus('');
       return;
     }
-    status.textContent = 'saving\u2026';
-    putMeta(targetPath, value).then((ok) => {
-      status.textContent = ok ? 'saved' : 'error';
-      status.classList.toggle('ok', ok);
-    });
+    setStatus('saving\u2026');
+    const ok = await putMeta(targetPath, next);
+    editing = false;
+    applyMode();
+    setStatus(ok ? 'saved' : 'error saving', ok);
   };
-  ta.addEventListener('blur', save);
+
+  editBtn.addEventListener('click', () => {
+    editBtn.blur();
+    ta.value = text();
+    editing = true;
+    applyMode();
+  });
+  doneBtn.addEventListener('click', () => {
+    doneBtn.blur();
+    save();
+  });
+  ta.addEventListener('blur', () => { if (editing) save(); });
   ta.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       e.preventDefault();
       ta.blur();
     }
   });
+
+  wrap.appendChild(view);
+  wrap.appendChild(ta);
+  wrap.appendChild(status);
+  applyMode();
   return wrap;
 }
 
 function pathFooter(p) {
-  const f = el('div', 'path-footer', p);
+  const f = el('div', 'path-footer');
+  const open = iconBtn('open-path-btn', 'folderOpen', 'Open folder');
+  open.title = `Open "${p}" in your file explorer`;
+  open.addEventListener('click', async (e) => {
+    e.preventDefault();
+    open.disabled = true;
+    try {
+      const res = await assetVault.openInExplorer(p);
+      if (!res || !res.ok) open.title = (res && res.error) || 'Could not open folder';
+    } finally {
+      setTimeout(() => { open.disabled = false; }, 800);
+    }
+  });
+  f.appendChild(open);
   return f;
 }
 
@@ -932,17 +1178,21 @@ function renderAssetDetail(content, asset) {
     content.appendChild(js);
   }
 
-  if (asset.importables && asset.importables.length) {
-    content.appendChild(el('div', 'detail-section-title', 'Importable files'));
+  const pkgs = (asset.importables || []).filter((f) => (f.kind || '').toLowerCase() === 'unitypackage');
+  if (pkgs.length) {
+    content.appendChild(el('div', 'detail-section-title', 'Import files'));
     const list = el('ul', 'file-list');
-    for (const f of asset.importables) {
-      list.appendChild(el('li', 'importable-file', `${f.name}  \u2014  ${f.rel}`));
-    }
+    for (const f of pkgs) list.appendChild(el('li', 'importable-file', f.name));
     content.appendChild(list);
   }
 
   content.appendChild(el('div', 'detail-section-title', 'Tags'));
-  content.appendChild(buildTagEditor(asset));
+  content.appendChild(buildTagEditor({
+    path: asset.folder,
+    name: asset.name,
+    assetPaths: [],
+    canCascade: false,
+  }));
 
   content.appendChild(buildDescriptionEditor(asset.folder));
 
@@ -971,10 +1221,14 @@ function renderContainerDetail(content, { node, scan }) {
     content.appendChild(buildKindPills(node.kindCounts));
   }
 
-  if (node.tags && node.tags.length) {
-    content.appendChild(el('div', 'detail-section-title', `Tags in subfolders (${node.tags.length})`));
-    content.appendChild(buildReadonlyTags(node.tags));
-  }
+  content.appendChild(el('div', 'detail-section-title', 'Tags'));
+  content.appendChild(buildTagEditor({
+    path: node.path,
+    name: node.name,
+    assetPaths: collectAssetPaths(node),
+    canCascade: true,
+    insideTags: node.tags,
+  }));
 
   content.appendChild(buildDescriptionEditor(node.path));
 
@@ -1003,71 +1257,18 @@ function renderLibraryDetail(content, { scan, addedAt }) {
     content.appendChild(buildKindPills(scan.kindCounts));
   }
 
-  if (scan.tags && scan.tags.length) {
-    content.appendChild(el('div', 'detail-section-title', `Tags (${scan.tags.length})`));
-    content.appendChild(buildReadonlyTags(scan.tags));
-  }
+  content.appendChild(el('div', 'detail-section-title', 'Tags'));
+  content.appendChild(buildTagEditor({
+    path: scan.path,
+    name: scan.name,
+    assetPaths: (scan.assets || []).map((a) => a.folder),
+    canCascade: true,
+    insideTags: scan.tags,
+  }));
 
   content.appendChild(buildDescriptionEditor(scan.path));
 
   content.appendChild(pathFooter(scan.path));
-}
-
-function buildTagEditor(asset) {
-  const wrap = el('div', 'detail-tags');
-  const render = () => {
-    wrap.innerHTML = '';
-    for (const t of asset.tags || []) {
-      const chip = el('span', 'detail-tag', t);
-      const rm = el('button', '', '\u00D7', `remove tag "${t}"`);
-      rm.addEventListener('click', (e) => {
-        e.stopPropagation();
-        putTags(asset, (asset.tags || []).filter((x) => x !== t));
-      });
-      chip.appendChild(rm);
-      wrap.appendChild(chip);
-    }
-
-    const row = el('div', 'tag-add-row');
-    const input = el('input');
-    input.type = 'text';
-    input.placeholder = 'add a tag\u2026';
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && input.value.trim()) {
-        const next = [...(asset.tags || []), input.value.trim().toLowerCase()];
-        putTags(asset, next);
-        input.value = '';
-      }
-    });
-    const add = el('button', '', '+');
-    add.addEventListener('click', () => {
-      if (input.value.trim()) {
-        const next = [...(asset.tags || []), input.value.trim().toLowerCase()];
-        putTags(asset, next);
-        input.value = '';
-      }
-    });
-    row.appendChild(input);
-    row.appendChild(add);
-    wrap.appendChild(row);
-  };
-  render();
-  return wrap;
-}
-
-async function putTags(asset, tags) {
-  const res = await fetch(`${state.serverUrl}/api/tags`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ path: asset.folder, tags }),
-  });
-  const json = await res.json();
-  if (!json.ok) return;
-  asset.tags = json.tags;
-  state.tagData[asset.folder] = json.tags;
-  renderDetail();
-  renderGrid();
-  renderViewHead();
 }
 
 async function putMeta(targetPath, description) {
@@ -1110,14 +1311,119 @@ async function sendImportJob(asset) {
   }
 }
 
+// ---------- update (rescan + enrich) ----------
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function fetchEnrichStatus() {
+  try {
+    const res = await fetch(`${state.serverUrl}/api/enrichment`);
+    const json = await res.json();
+    return json.ok ? json.status : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+// "Update" is scoped to the current selection: an asset updates just that
+// asset, a folder updates its subtree, a library updates its whole library,
+// and otherwise everything is scanned. New/missing descriptions are fetched
+// from the Unity Asset Store in the main process and tags are derived on top.
+async function runUpdate() {
+  if (!state.serverUrl) return;
+  const btn = $('#btn-update');
+  const statusEl = $('#update-status');
+  if (!btn || btn.disabled || !statusEl) return;
+  btn.disabled = true;
+  btn.classList.add('loading');
+  statusEl.classList.remove('hidden');
+  const setStatus = (msg) => { statusEl.textContent = msg || ''; };
+  const clearStatus = () => {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    statusEl.classList.add('hidden');
+    statusEl.textContent = '';
+  };
+
+  let scope = { type: 'all' };
+  if (state.detail && state.detail.kind === 'asset') {
+    const a = findAssetById(state.detail.assetId);
+    if (a) scope = { type: 'asset', libId: a._libId, rel: a.relPath };
+  } else if (state.activeNode) {
+    scope = { type: 'container', libId: state.activeNode.libId, rel: state.activeNode.rel };
+  } else if (state.activeLibId !== null) {
+    scope = { type: 'library', libId: state.activeLibId };
+  }
+
+  setStatus('Scanning\u2026');
+  try {
+    const res = await fetch(`${state.serverUrl}/api/update`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scope }),
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'update failed');
+    if (json.libraries) state.libraries = json.libraries;
+    await loadPeripherals();
+    expandAllLibraries();
+    renderAll();
+
+    // Watch the main-process enrichment queue until it drains.
+    const started = Date.now();
+    let status = json.status;
+    while (true) {
+      if (!status || status.state !== 'fetching') break;
+      const finished = status.done + status.active;
+      const total = finished + status.pending;
+      setStatus(total ? `Fetching descriptions\u2026 ${finished}/${total}` : 'Fetching descriptions\u2026');
+      if (Date.now() - started > 600000) break; // give up waiting after 10 minutes
+      await sleep(900);
+      status = await fetchEnrichStatus();
+    }
+  } catch (err) {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    statusEl.classList.remove('hidden');
+    setStatus(`Update failed: ${(err && err.message) || 'unknown error'}`);
+    await refreshLibrary();
+    setTimeout(clearStatus, 6000);
+    return;
+  }
+  clearStatus();
+  await refreshLibrary();
+}
+
 // ---------- bindings ----------
 
 function bindUi() {
+  const withIcon = (id, name) => {
+    const b = document.getElementById(id);
+    if (b && typeof b.insertBefore === 'function') b.insertBefore(iconSpan(name, 'btn-icon'), b.firstChild);
+  };
+  withIcon('btn-tag-filter', 'tag');
+  withIcon('btn-update', 'refresh');
+  withIcon('btn-add-library', 'plus');
+  withIcon('btn-collapse-all', 'chevronsUp');
+  const sw = document.querySelector('.search-wrap');
+  if (sw && typeof sw.insertBefore === 'function') sw.insertBefore(iconSpan('search', 'search-glyph'), sw.firstChild);
   $('#btn-add-library').addEventListener('click', async () => {
     state.libsMeta = (await assetVault.addLibrary()).libraries || [];
     await refreshLibrary();
   });
-  $('#btn-rescan').addEventListener('click', refreshLibrary);
+  $('#btn-update').addEventListener('click', runUpdate);
+  $('#btn-collapse-all').addEventListener('click', () => {
+    state.expanded.clear();
+    if (state.activeLibId !== null) {
+      state.activeLibId = null;
+      state.activeNode = null;
+      state.selectedAssetId = null;
+      state.detail = null;
+    }
+    refresh();
+  });
   $('#search').addEventListener('input', (e) => {
     state.search = e.target.value;
     renderGrid();

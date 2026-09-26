@@ -35,6 +35,9 @@ Contents:
  │   window + dialogs        │◄──────────►│ ui/renderer.js (SPA)     │
  │   stores (JsonStore)      │            └──────────┬───────────────┘
  │   user-data migration     │                       │ fetch (127.0.0.1)
+ │   enrichment queue        │                       │
+ │ src/main/enrichment.js  ──┼── HTTPS ──► Unity Asset Store (descriptions)
+ │ src/main/autoTags.js      │◄── derived tags
  │ src/main/bridgeServer.js  │ ◄─────────────────────┘
  │   HTTP/1.1 bridge :7100   │        Unity Editor (plugin)
  │   job queue (in-memory)   │ ◄────────────────────────
@@ -48,6 +51,8 @@ Contents:
   Unity plugin. It is bound to `127.0.0.1` by default (override via
   `asset-vault-settings.json` → `server`).
 - The Unity Editor package polls the bridge; the desktop app never pushes.
+- **Enrichment also runs in the main process** (never the renderer, whose CSP
+  only allows loopback), so lookups keep working while the window is busy.
 
 ### Repository layout
 
@@ -55,10 +60,12 @@ Contents:
 src/main/store.js          JSON-backed persistence (no Electron deps)
 src/main/library.js        scanner: asset/folder detection, aggregation
 src/main/bridgeServer.js   HTTP bridge + job queue (exported pure for tests)
-src/main/index.js          Electron main, IPC, dialogs, migration
+src/main/enrichment.js     throttled description/tag queue + meta merge rules
+src/main/autoTags.js       curated keyword/category → tag rules
+src/main/index.js          Electron main, IPC, dialogs, migration, enrichment wiring
 src/preload.js             context-isolated renderer bridge (IPC)
 ui/                        renderer (index.html / style.css / renderer.js)
-tests/smoke.js             headless scanner + bridge integration test
+tests/smoke.js             headless scanner + bridge + enrichment test
 tests/e2e.js               full-process Electron test with a fixture library
 tools/gen-icon.js          programmatic icon generation (ico / png / icns)
 tools/gen-sample.js        regenerates the bundled sample library
@@ -79,6 +86,55 @@ docs/TECHNICAL.md          this file
 | `removeLibrary(id)` | `assetvault:removeLibrary` | Unregisters a library |
 | `getState()` | `assetvault:getState` | `{ name, version, libraries, jobs }` |
 | `getServerInfo()` | `assetvault:getServerInfo` | `{ host, port }` of the bridge |
+| `openInExplorer(path)` | `assetvault:openPath` | Opens a folder in the OS file explorer (`shell.openPath`) |
+| `fetchUnityDescription(name)` | `assetvault:fetchUnityDescription` | Searches the Unity Asset Store for a package (kept for the legacy preload surface; the UI no longer calls it) |
+
+### Remote calls from the main process
+
+The renderer's CSP only allows loopback connections, so anything hitting the
+public internet must run in the main process. `src/main/unityAssetStore.js`
+answers the `assetvault:fetchUnityDescription` channel and is called by the
+enrichment engine; it talks directly to the Asset Store:
+
+1. `GET /sitemap?q=<name>` (server-rendered) → SOLR results under
+   `searchPackageFromSolr.results` — each has `id`, `name`, `category`.
+2. The best name match (see `pickBest`) is opened at
+   `/packages/<category>/<slug>-<id>` (redirects followed).
+3. The product page embeds its app-state as JSON; the real description lives in
+   the object `"<id>":{"id":"<id>","productId":…,"name":…,"description":"<html>"}`
+   — extracted there because longer `"description"` strings on the page belong
+   to recommended-product carousels, not the product itself. HTML is flattened
+   to plain text (`htmlToText`).
+
+Requests time out after 20 s (`TIMEOUT_MS` in `unityAssetStore.js`). If no
+product scores high enough, the result reports `found: false` and the stored
+description is left untouched.
+
+### Enrichment engine
+
+`src/main/enrichment.js` exports `createEnrichment(deps)` — everything it
+touches is injected (`getMeta`, `setMeta`, `getTags`, `setTags`, `lookup`), so
+`tests/smoke.js` drives the real engine with a fake lookup.
+
+- **Queue** — `request(items, { force })` skips items that already have a
+  `fetchedAt` marker, deduplicates against queued/active paths, and starts the
+  drain. `force: true` (the **Update** action) re-queues records whose lookup
+  reported `found: false`.
+- **Lanes** — 3 concurrent workers with a shared 150 ms gap between lookups.
+  Completion is tracked with a `draining` boolean + `Promise.all`, never a
+  worker counter (a counter can go negative and spin the loop forever).
+- **Persistence** — `mergeMetaEntry(prev, entry)` folds a result into the meta
+  record `{ description, name, url, found, fetchedAt }`. A lookup that found
+  nothing keeps the previous description, so hand-written text is never lost.
+- **Tags** — `deriveTags(name, category, description)` in `autoTags.js` maps
+  curated keywords and the Asset Store category segments to lowercase tags
+  (max 64), merged with whatever the asset already had.
+- **Status** — `status()` → `{ state, pending, active, done, message }`, served
+  at `GET /api/enrichment`; the renderer polls it while **Update** is running.
+
+Trigger points: every `GET /api/library` (all assets lacking `fetchedAt`) and
+`POST /api/update` (the scoped target list, forced). `ASSETVAULT_NO_ENRICH=1`
+wires `null` instead, which the bridge treats as "enrichment unavailable".
 
 ---
 
@@ -163,11 +219,14 @@ loopback-only.
 | Method | Path | Purpose |
 | --- | --- | --- |
 | GET | `/api/status` | Health + registered libraries |
-| GET | `/api/library` | Full rescanned library tree + assets (nested) |
-| GET | `/api/meta` | All stored descriptions `{ absPath: { description } }` |
-| PUT | `/api/meta` | Set a folder description `{ path, description }` (empty deletes) |
+| GET | `/api/library` | Full rescanned library tree + assets (nested); also queues enrichment for new assets |
+| POST | `/api/update` | Scoped re-scan + forced store re-check `{ scope }` → `{ libraries, targets, status }` |
+| GET | `/api/enrichment` | Enrichment queue `{ state, pending, active, done, message }` |
+| GET | `/api/meta` | All stored records `{ absPath: { description, name, url, found, fetchedAt } }` |
+| PUT | `/api/meta` | Set a description `{ path, description }` (empty deletes the record) |
 | GET | `/api/tags` | All stored tags `{ absPath: string[] }` |
 | PUT | `/api/tags` | Set tags `{ path, tags[] }` — lowercased/trimmed/deduped, max 64 |
+| POST | `/api/tags/apply` | Add/remove tags across paths `{ paths[], add[], remove[] }` — one call for a cascade |
 | POST | `/api/import-job` | Queue an asset import `{ assetId, assetName, category, libraryName, assetFolder, tags, importables }` |
 | GET | `/api/import-jobs` | All jobs (history + status) |
 | GET | `/api/unity/import-jobs` | Active (non-terminal) jobs — what the plugin polls |
@@ -176,10 +235,20 @@ loopback-only.
 | GET | `/api/preview?path=…` | Preview image stream (whitelisted extensions + library roots only) |
 | GET | `/__diag?action=…` | Test automation probe (below) |
 
+**Update scopes** (`POST /api/update`): `{ type: 'asset' | 'container', libId, rel }`
+resolves the node in the fresh tree and targets that asset or its subtree;
+`{ type: 'library', libId }` targets the whole library; anything else targets
+every asset. Targets are `{ path, name }` pairs queued with `force: true`, so
+records whose earlier lookup found nothing are retried.
+
 **Guards (always enforced):**
 
 - `PUT /api/tags` and `PUT /api/meta`: 400 if `path` missing, 403 if the
   resolved path is outside a registered library.
+- `POST /api/tags/apply`: 400 if `paths` is missing/empty, 403 if any path is
+  outside a registered library.
+- `POST /api/update`: 400 if `scope` is malformed; unknown types fall back to
+  `all`.
 - `POST /api/import-job`: 400 if `assetFolder`/`importables` missing/invalid,
   403 if the folder is outside a library.
 - `GET /api/preview`: 400 unsupported extension; 403 outside a library;
@@ -206,12 +275,15 @@ Executes JavaScript inside the renderer and returns UI metrics. Actions:
 | --- | --- |
 | `selectRel:<rel>` | Clicks the tree row whose name equals `<rel>` |
 | `selectFirstCard` | Clicks the first asset card |
-| `rescan` | Clicks the Rescan button |
+| `update` (alias `rescan`) | Clicks the Update button |
 | `theme:<name>` | Applies a theme via the toolbar select |
 
 Response metrics include `libs`, `treeRows`, `cards`, `dot`,
 `detail` (detail h2), `view` (dataset.view), `metaRows`, `descEditors`,
-`contTagChips`, `theme`, `splitters`, `sbW`, `trw` (first tree-row paddings).
+`tagInputs`, `cascadeToggles`, `tagSuggestions`, `contTagChips`, `updateBtn`,
+`updateStatus`, `updateStatusShown`, `importHeading`, `importFiles`,
+`fileRows`, `openPathBtns`, `pathTexts`, `theme`, `splitters`, `sbW`, `trw`
+(first tree-row paddings).
 
 ---
 
@@ -246,10 +318,43 @@ libraries        // full scans from /api/library
 tagData, metaData
 jobsByAsset      // Map<assetId, job>
 activeLibId, activeNode ({libId, rel} folder filter)
-expanded         // Set of `libId::rel` expand keys
+  expanded         // Set of `libId::rel` expand keys
 selectedAssetId, detail ({kind: asset|container|library, …})
-search, online, theme
+search, online, theme, loading        // `loading` shows the Update spinner/status
 ```
+
+### Detail panel builders
+
+`renderDetail()` dispatches to one of three builders, each composed from the
+same three widgets so an asset, a folder, and a library feel identical:
+
+- `buildMetaGrid(rows)` — label/value pairs (`Created`, `Modified`, counts,
+  size, `Importable`).
+- `buildTagEditor({ path, name, assetPaths, canCascade, insideTags })` — current
+  tags as `.detail-tag` chips with a remove button, a `tag-add-row` input, and
+  `.tag-suggest-item` buttons for up to 8 existing tags in the app. When
+  `canCascade`, a `.cascade-toggle` button (default **on**) widens every
+  mutation to `[path, ...assetPaths]` and sends it as a single
+  `POST /api/tags/apply`. `insideTags` (the aggregated descendant tags of a
+  folder/library) renders as muted `.tag-inside` chips labelled `inside (n)`
+  that filter the grid instead of editing.
+- `buildDescriptionEditor(path)` — an **empty** description starts in edit mode
+  (textarea + Cancel/Save); a stored one renders as `.desc-view` text with an
+  **Edit** action. Ctrl/⌘+Enter commits.
+- `pathFooter(path)` — the full-width **Open folder** button only; the absolute
+  path is never printed.
+- Assets additionally render an **Import files** list holding just the
+  `.unitypackage` filenames from `asset.importables`.
+
+### Update flow
+
+`runUpdate()` derives its scope from the current selection (asset → container →
+library → all), posts it to `/api/update`, renders the returned libraries, then
+polls `GET /api/enrichment` every 900 ms until the main-process queue is idle,
+showing `Fetching descriptions… n/total` in `#update-status`. A failure keeps
+the error message visible for 6 s instead of clearing the bubble silently.
+`loadPeripherals()` refreshes tags/meta/jobs in one call and
+`expandAllLibraries()` re-opens the trees after a rescan.
 
 **Rendering strategy** (this is what stopped the "constant refreshing"):
 
@@ -293,9 +398,19 @@ warm near-black `#250e17`):
 - All palette colors are CSS custom properties per theme; `color-scheme`
   follows so native controls (scrollbars, inputs) match. `--grad` is the
   brand gradient used for selection highlights and focus interactions.
-- Fonts: **Montserrat** is bundled offline in `ui/assets/fonts/` (via the
-  `@fontsource/montserrat` devDependency, copied by `npm run icons`) and
-  applied globally with per-weight `@font-face` rules.
+- Fonts: **Inter** is bundled offline in `ui/assets/fonts/` (via the
+  `@fontsource/inter` devDependency, copied by `npm run icons` → generates
+  `inter-latin-{300..700}-normal.woff2`) and applied globally with per-weight
+  `@font-face` rules; headings use tight negative letter-spacing.
+- Icons: inline **lucide.dev** SVGs live in the renderer `ICONS` map
+  (`ui/renderer.js`) and inherit `currentColor` — carets, folder/box rows,
+  toolbar actions (`tag`, `refresh`, `plus`), the search magnifier, tag
+  removal (`x`), open-folder (`folder-open`), collapse-all (`chevrons-up`),
+  and the description editor (`sparkles`, `pencil`, `check`). No icon font
+  and no network fetch (CSP stays `'self'` + loopback).
+- Surfaces: toolbar/sidebar/grid/detail are rounded-xl cards on hairline
+  borders (`white/10` dark, `black/10` light) with translucent backdrops over
+  body radial gradients; spacing is an 8px grid.
 - Branding: the toolbar shows the **horizontal wordmark**
   (`branding/logo-horizontal.png` → `ui/assets/logo.png`, aspect-preserving
   scale); the favicon/app image is `ui/assets/icon.png` (square art from
@@ -348,7 +463,7 @@ Stores are plain JSON via `src/main/store.js` in `app.getPath('userData')`
 | --- | --- |
 | `asset-vault-settings.json` | `{ libraries: [{id,name,path,addedAt}], server: { host, port } }` |
 | `asset-vault-tags.json` | `{ tags: { [absPath]: string[] } }` |
-| `asset-vault-meta.json` | `{ meta: { [absPath]: { description } } }` |
+| `asset-vault-meta.json` | `{ meta: { [absPath]: { description, name, url, found, fetchedAt } } }` |
 | `asset-vault-jobs.json` | `{ jobs: Job[] }` |
 
 **Migration:** pre-0.3 builds used the product name "Asset Vault", so their
@@ -371,6 +486,10 @@ userData folder is `…/Asset Vault`. On first launch under the new name,
   images/connects to loopback only, and forbids `unsafe-eval`.
 - On Windows, request single-instance lock; `setWindowOpenHandler` forces all
   `http(s)` links to the system browser.
+- The single outbound request is the Asset Store description lookup, issued from
+  the main process against the store's public product page — no credentials, no
+  user data attached, at most 3 concurrent lookups spaced 150 ms apart, each
+  bounded by a 20 s timeout.
 
 ---
 
@@ -427,16 +546,24 @@ on your oldest supported distro or rely on `APPIMAGE_EXTRACT_AND_RUN=1`.
 ## Test harness
 
 - `node tests/smoke.js` — creates a fixture tree (nested, tagged, described),
-  runs `scanLibrary` (asserts aggregation/kinds/dates/tags/descriptions) and
-  boots the bridge with temp stores (asserts preview auth guard, tags + meta
-  round-trips, 403 for outside-library paths, job queue transitions).
+  runs `scanLibrary` (asserts aggregation/kinds/dates/tags/descriptions),
+  drives the real `createEnrichment` engine with a fake lookup (asserts
+  auto-fetch, derived tags, dedupe, lookup failures, `force` retry, and that a
+  miss never wipes a manual description), and boots the bridge twice with temp
+  stores (preview auth guard, tags + meta round-trips, 403 for outside-library
+  paths, job queue transitions, plus an end-to-end check that `GET /api/library`
+  enriches new assets and `POST /api/update` re-checks only the misses).
 - `node tests/e2e.js` — spawns the real Electron main with
-  `ASSETVAULT_USER_DATA` + `ASSETVAULT_BOOT_LIBRARY`, drives the UI through the
+  `ASSETVAULT_USER_DATA` + `ASSETVAULT_BOOT_LIBRARY` + `ASSETVAULT_NO_ENRICH=1`
+  (no network), drives the UI through the
   HTTP `__diag` actions, and asserts rendered state: library registered,
-  tree rows/cards present, container detail (meta rows + descendant tag
-  chips), asset detail (description editor), theme switching, and the two
+  tree rows/cards present, container detail (meta rows, descendant tag chips,
+  cascade toggle, no path text), asset detail (description editor, tag input),
+  the **Import files** list, theme switching, and the two
   splitters. Polls are handled by `waitForDiag(action, predicate, what)`, which
   repeats actions until a timeout while the renderer's 5 s job-poll runs.
+  (`selectRel:<name>`, `selectFirstCard`, `selectCard:<name>`, `selectLib`,
+  `update`, `theme:<name>`, `tag:<name>` are the available actions.)
 
 Both tests must pass before a release; they are the final verification step of
 the packaging pipeline documented in the [README](../README.md).
@@ -449,6 +576,7 @@ the packaging pipeline documented in the [README](../README.md).
 | --- | --- |
 | `ASSETVAULT_USER_DATA` | Redirects `userData` (headless test isolation) |
 | `ASSETVAULT_BOOT_LIBRARY` | Registers a library at boot without UI |
+| `ASSETVAULT_NO_ENRICH` | `1` disables Asset Store lookups (used by `tests/e2e.js`) |
 | `ASSETVAULT_DEBUG` | Streams renderer console messages to stdout |
 
 ---

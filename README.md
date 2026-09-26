@@ -8,7 +8,7 @@
 
 <p>
   <a href="https://github.com/xeeshanqaswar/Poly-Vault"><img src="https://img.shields.io/badge/project-Poly%20Vault-1f6feb" alt="Project"></a>
-  <a href="https://github.com/xeeshanqaswar/Poly-Vault/releases"><img src="https://img.shields.io/badge/version-0.3.0-1f6feb" alt="Version"></a>
+  <a href="https://github.com/xeeshanqaswar/Poly-Vault/releases"><img src="https://img.shields.io/badge/version-0.4.0-1f6feb" alt="Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-793700" alt="Platforms">
   <a href="https://github.com/xeeshanqaswar/Poly-Vault/actions"><img src="https://img.shields.io/badge/CI-GitHub%20Actions-2b7489" alt="CI"></a>
@@ -55,19 +55,35 @@ Built by **Zeeshan Qaswar**.
 - **Understand your library** — every folder shows total assets, files, size,
   and what it contains (meshes, textures, audio, video, fonts, materials,
   scripts…).
-- **Describe & organise** — add tags and descriptions to any folder, stored
-  locally and searchable.
+- **Describe & organise** — add tags and descriptions to any asset, folder, or
+  library, stored locally and searchable. Folder and library tags cascade to
+  everything inside them in one click, with suggestions from tags you already use.
+- **Automatic Asset Store enrichment** — every newly discovered asset is looked
+  up in the Unity Asset Store for you: the description is saved and tags are
+  derived from the store name, category, and description, so new assets arrive
+  already described and tagged. The **Update** button re-scans and re-checks
+  whatever is selected (asset → folder → library → everything), with a
+  `Fetching descriptions… n/total` progress bubble. Descriptions you write by
+  hand are never overwritten.
+- **Move through folders** — a **Collapse all** button folds the whole sidebar
+  tree at once, and a full-width **Open folder** button in the details panel
+  opens any library, folder, or asset's directory in the OS file explorer.
 - **One-click Unity import** — queue any asset; the bundled Unity 6 Editor
   plugin copies it into `Assets/PolyVaultImports/…`. `.unitypackage` files open
   Unity's import dialog, everything else is copied automatically.
 - **Live Unity connection indicator** — the toolbar shows *unity: connected*
   as long as the Editor plugin is actively talking to the bridge.
-- **Make it yours** — 3 themes (Default / Dark / Light), offline-bundled
-  Montserrat font, resizable side panels, and a clean, menu-bar-free,
+- **Make it yours** — 3 themes (Default / Dark / Light), offline-bundled Inter
+  font with lucide icons, resizable side panels, and a clean, menu-bar-free,
   macOS-inspired window (no File/Edit/View menu — everything is in the UI).
 - **Truly local** — everything is stored in JSON on your machine; the bridge
   binds to `127.0.0.1` and serves no secrets.
 
+> **New in 0.4** — new assets now describe and tag themselves from the Unity
+> Asset Store automatically, **Update** re-checks exactly what you have
+> selected, and the whole UI got a bento refresh (hairline cards, Inter, lucide
+> icons).
+>
 > **New in 0.3** — the app is now called **Poly Vault** (it was "Asset Vault").
 > Your existing libraries, tags, and descriptions are carried over
 > automatically on first launch.
@@ -79,7 +95,7 @@ Built by **Zeeshan Qaswar**.
 <p align="center">
   <img src="docs/assets/screenshot.png" alt="Poly Vault — browsing a 3D/2D asset library" width="720" />
   <br/>
-  <em>Poly Vault 0.3 — library tree, preview cards, and the details panel.</em>
+  <em>Poly Vault 0.4 — library tree, preview cards, and the details panel.</em>
 </p>
 
 ---
@@ -90,8 +106,8 @@ Built by **Zeeshan Qaswar**.
 
 | Platform | Get it | Install |
 | --- | --- | --- |
-| **Windows** | `dist/PolyVault-Setup-0.3.0.exe` | Run the NSIS installer. |
-| **Linux** | `dist/PolyVault-0.3.0-x86_64.AppImage` or `PolyVault-0.3.0-amd64.deb` | AppImage: `chmod +x` then run. Deb: `sudo dpkg -i`. |
+| **Windows** | `dist/PolyVault-Setup-0.4.0.exe` | Run the NSIS installer. |
+| **Linux** | `dist/PolyVault-0.4.0-x86_64.AppImage` or `PolyVault-0.4.0-amd64.deb` | AppImage: `chmod +x` then run. Deb: `sudo dpkg -i`. |
 | **macOS** | build from source or grab the GitHub Actions artifacts (the DMG must be produced on a Mac) | Open the DMG, drag to Applications. |
 
 The Windows exe is **unsigned**, so SmartScreen may ask for *More info →
@@ -115,7 +131,7 @@ npm start
 ## How the app works
 
 1. **Add a library** — pick any folder that contains *category subfolders*.
-2. The app scans it (filesystem only, nothing leaves your machine) and shows it
+2. The app scans it (filesystem only; nothing leaves your machine) and shows it
    as a **tree on the left** and **preview cards in the middle**.
 3. Click any **folder or card** → the **details panel on the right** shows
    dates, counts, sizes, detected asset types, tags, and a description editor.
@@ -123,10 +139,16 @@ npm start
    plugin is running, the asset lands in
    `Assets/PolyVaultImports/<Library>/<Category>/<Asset>/…`, always as a
    **copy** — your library is never modified.
+5. New assets are looked up in the Unity Asset Store in the background, so their
+   description and derived tags fill in on their own. **Update** re-scans and
+   re-checks just what you have selected.
 
 Card selection is flicker-free (only the highlight and details update), 
 rescans skip repainting when nothing changed, and resizing the three-pane
 layout is pointer-driven with the widths remembered between runs.
+
+> The only outbound request the app ever makes is the Asset Store description
+> lookup, and it happens on your machine — no telemetry, no accounts, no keys.
 
 ## Folder layout convention
 
@@ -204,11 +226,13 @@ Everything is stored **locally** in the app data folder
 | File | Contents |
 | --- | --- |
 | `asset-vault-settings.json` | Registered libraries + server settings |
-| `asset-vault-tags.json` | Tags per folder |
-| `asset-vault-meta.json` | Descriptions per folder |
+| `asset-vault-tags.json` | Tags per asset, folder, or library |
+| `asset-vault-meta.json` | Descriptions + store lookup results (`name`, `url`, `found`, `fetchedAt`) |
 | `asset-vault-jobs.json` | Import job history |
 
 - The app is **offline-first**: no telemetry, no accounts, no cloud sync.
+- The only outbound request is the Unity Asset Store description lookup, sent
+  from the main process to the store's public page — nothing else, ever.
 - The local bridge binds to `127.0.0.1` only; no payload is ever served to
   other hosts.
 - Pre-0.3 data under a legacy `…/Asset Vault` folder is migrated
@@ -225,6 +249,7 @@ and the test suite:
 | --- | --- |
 | `ASSETVAULT_USER_DATA` | Redirect the user-data folder (headless/test isolation) |
 | `ASSETVAULT_BOOT_LIBRARY` | Register a library at boot without the folder dialog |
+| `ASSETVAULT_NO_ENRICH` | `1` disables all Asset Store lookups (used by the E2E test) |
 | `ASSETVAULT_DEBUG` | Stream renderer console messages to stdout |
 
 The bridge port/host can also be changed in `asset-vault-settings.json`

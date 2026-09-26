@@ -36,6 +36,8 @@ const env = {
   ...process.env,
   ASSETVAULT_USER_DATA: USER_DATA,
   ASSETVAULT_BOOT_LIBRARY: LIB,
+  // Keep the run hermetic: no live Asset Store lookups from the test fixture.
+  ASSETVAULT_NO_ENRICH: '1',
 };
 
 const electronExe = path.join(__dirname, '..', 'node_modules', 'electron', 'dist', 'electron.exe');
@@ -172,14 +174,18 @@ async function waitForDiag(action, filter, what, ms = 15000) {
   console.log(`renderer ok: libs=${diag.libs}, treeRows=${diag.treeRows}, cards=${diag.cards}, derivedState=${diag.dot}`);
 
   // Click the 3d container -> folder detail should show aggregated info + tags.
-  // Force a rescan first so the renderer picks up the tags added above.
-  await waitForDiag('rescan', (j) => j.libs >= 1, 'renderer to re-scan libraries');
+  // Force an update first so the renderer picks up the tags added above.
+  await waitForDiag('update', (j) => j.libs >= 1 && j.updateBtn === 'Update', 'renderer to re-scan libraries');
   const containerDiag = await waitForDiag(
     'selectRel:3d',
     (j) => j.detail === '3d' && j.view === 'container' && j.metaRows >= 5 && j.contTagChips === 2,
     'container detail (3d) to render aggregated stats + descendant tags'
   );
-  console.log(`container detail ok: metaRows=${containerDiag.metaRows}, descendant tag chips=${containerDiag.contTagChips}`);
+  assert.strictEqual(containerDiag.tagInputs, 1, 'container detail has a tag input');
+  assert.strictEqual(containerDiag.cascadeToggles, 1, 'container detail offers cascade tagging');
+  assert.strictEqual(containerDiag.descEditors, 1, 'container detail has a description editor');
+  assert.strictEqual(containerDiag.openPathBtns, 1, 'container footer has a single full-width open button');
+  assert.strictEqual(containerDiag.pathTexts, 0, 'path text is no longer rendered in the footer');  console.log(`container detail ok: metaRows=${containerDiag.metaRows}, descendant tag chips=${containerDiag.contTagChips}, cascade=${containerDiag.cascadeToggles}`);
 
   // Click the first card -> asset detail renders again.
   const assetDiag = await waitForDiag(
@@ -187,7 +193,21 @@ async function waitForDiag(action, filter, what, ms = 15000) {
     (j) => j.detail === 'Chair' && j.view === 'asset' && j.metaRows >= 5 && j.descEditors >= 1,
     'asset detail to render after selecting a card'
   );
+  assert.strictEqual(assetDiag.cascadeToggles, 0, 'assets tag themselves only (no cascade toggle)');
+  assert.strictEqual(assetDiag.tagInputs, 1, 'asset detail has a tag input');
+  assert.strictEqual(assetDiag.pathTexts, 0, 'asset footer shows no path text');
   console.log(`asset detail ok: detail=${assetDiag.detail}, view=${assetDiag.view}, metaRows=${assetDiag.metaRows}`);
+
+  // Pack holds the only .unitypackage -> the detail lists just that filename.
+  await waitForDiag('selectLib', (j) => j.view === 'library', 'breadcrumb back to the library view');
+  const packDiag = await waitForDiag(
+    'selectCard:Pack',
+    (j) => j.detail === 'Pack' && j.view === 'asset' && j.fileRows >= 1,
+    'Pack detail to list its importable package'
+  );
+  assert.strictEqual(packDiag.importHeading, 'Import files', 'import section is titled "Import files"');
+  assert.deepStrictEqual(packDiag.importFiles, ['sheet.unitypackage'], 'only the .unitypackage filename is listed');
+  console.log(`import files ok: ${packDiag.importFiles.join(', ')}`);
 
   // Theme switching + resizable splitters present.
   const themeLight = await waitForDiag(
