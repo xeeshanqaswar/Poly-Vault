@@ -106,6 +106,12 @@ never counted as an importable — a folder with *only* a preview is browse-only
 (first existing match in that priority order; `.png` wins over `.jpg`, etc.).
 Served through `GET /api/preview`, never embedded as a file path.
 
+Responses carry `Cache-Control: private, max-age=3600`, a weak `ETag`
+(`W/"<size>-<mtime>"`) and `Last-Modified`, so grid re-renders (filtering,
+searching, tag changes) reuse the browser's copy instead of re-streaming from
+disk. `If-None-Match` / `If-Modified-Since` answer `304` with no body. Every other
+bridge response stays `no-store` — only previews are cacheable.
+
 ### 4.3 Importable file kinds
 
 | Kind | Extensions |
@@ -310,7 +316,7 @@ RequestBody cap: **2 MB**.
 | `POST /api/tags/apply` | 400 if `paths` missing/empty; 403 if any path is outside a registered library |
 | `POST /api/update` | 400 if `scope` is malformed; unknown scope types fall back to `all` |
 | `POST /api/import-job` | 400 if `assetFolder`/`importables` missing/invalid; 403 if folder outside a library |
-| `GET /api/preview` | 400 unsupported extension; 403 outside a library; 404 missing file |
+| `GET /api/preview` | 400 unsupported extension; 403 outside a library; 404 missing file; 304 when `If-None-Match`/`If-Modified-Since` matches |
 | all bodies | `readBody` cap 2 MB |
 
 `withinLibrary()` resolves with `path.resolve` and permits the library root and

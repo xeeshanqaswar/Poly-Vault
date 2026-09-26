@@ -6,6 +6,16 @@ All notable changes to **Poly Vault** are documented here. Format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **Preview caching** — `/api/preview` now answers with `Cache-Control: private,
+  max-age=3600`, a weak `ETag` and `Last-Modified`, and returns `304 Not Modified`
+  for `If-None-Match` / `If-Modified-Since`. Previously every grid re-render
+  re-streamed each visible thumbnail from disk (`no-store`, no validator), so
+  filtering, tag changes and search re-read the same images repeatedly.
+- **Search debounce** — the toolbar search box waits 120 ms before re-rendering
+  the grid instead of rebuilding it on every keystroke.
+
 ## [0.4.0] — 2026-09-26
 
 Automatic enrichment + a bento UI refresh. New assets now describe and tag

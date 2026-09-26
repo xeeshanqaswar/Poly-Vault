@@ -1424,10 +1424,15 @@ function bindUi() {
     }
     refresh();
   });
-  $('#search').addEventListener('input', (e) => {
+  const searchInput = $('#search');
+  let searchTimer = 0;
+  searchInput.addEventListener('input', (e) => {
     state.search = e.target.value;
-    renderGrid();
-    renderViewHead();
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      renderGrid();
+      renderViewHead();
+    }, 120);
   });
   $('#theme-select').addEventListener('change', (e) => {
     applyTheme(e.target.value, true);

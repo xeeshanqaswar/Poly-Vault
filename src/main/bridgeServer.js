@@ -8,6 +8,7 @@ const crypto = require('crypto');
 const { scanLibrary } = require('./library');
 
 const ALLOWED_PREVIEW_EXT = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif']);
+const PREVIEW_CACHE_CONTROL = 'private, max-age=3600';
 const MIME = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
@@ -329,11 +330,23 @@ function startBridge({ host = '127.0.0.1', port = 7100, getState, tags, meta, on
           sendJson(res, 404, { ok: false, error: 'not found' });
           return;
         }
-        res.writeHead(200, {
+        const etag = `W/"${stat.size.toString(16)}-${Math.trunc(stat.mtimeMs).toString(16)}"`;
+        const base = {
           'Content-Type': MIME[ext] || 'application/octet-stream',
-          'Content-Length': stat.size,
-          'Cache-Control': 'no-store',
-        });
+          'Cache-Control': PREVIEW_CACHE_CONTROL,
+          ETag: etag,
+          'Last-Modified': new Date(stat.mtimeMs).toUTCString(),
+        };
+        const inm = req.headers['if-none-match'];
+        const ims = req.headers['if-modified-since'];
+        const fresh = (inm && inm.split(',').some((t) => t.trim() === etag))
+          || (!inm && ims && Date.parse(ims) >= Math.trunc(stat.mtimeMs / 1000) * 1000);
+        if (fresh) {
+          res.writeHead(304, base);
+          res.end();
+          return;
+        }
+        res.writeHead(200, { ...base, 'Content-Length': stat.size });
         fs.createReadStream(target).pipe(res);
         return;
       }

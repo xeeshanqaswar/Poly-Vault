@@ -214,7 +214,12 @@ unchanged (see [Renderer & UI state](#renderer--ui-state)).
 
 Base URL `http://127.0.0.1:7100`. All responses are JSON
 (`Cache-Control: no-store`). CORS is open (`*`) because the bridge is
-loopback-only.
+loopback-only. The one exception is `/api/preview`, which streams image bytes
+and is served `Cache-Control: private, max-age=3600` with a weak
+`ETag` (`W/"<size hex>-<mtimeMs hex>"`) plus `Last-Modified`, answering `304` for
+`If-None-Match` / `If-Modified-Since`; the renderer rebuilds the whole grid on
+filter/tag/search changes, so the validator is what keeps that from re-streaming
+every visible thumbnail.
 
 | Method | Path | Purpose |
 | --- | --- | --- |
@@ -252,7 +257,7 @@ records whose earlier lookup found nothing are retried.
 - `POST /api/import-job`: 400 if `assetFolder`/`importables` missing/invalid,
   403 if the folder is outside a library.
 - `GET /api/preview`: 400 unsupported extension; 403 outside a library;
-  404 missing file.
+  404 missing file; 304 when a conditional header matches the current file.
 - Bodies are capped at 2 MB (`readBody`).
 - Port/host are configurable via `asset-vault-settings.json` → `server`.
 

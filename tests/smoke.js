@@ -229,6 +229,21 @@ console.log(`scan ok: ${lib.totalAssets} assets, nested depth ok`);
   const chairLive = scan.assets.find((a) => a.name === 'Chair');
   const prev = await fetch(`${base}/api/preview?path=${encodeURIComponent(chairLive.preview.path)}`);
   assert.strictEqual(prev.status, 200);
+  const prevEtag = prev.headers.get('etag');
+  assert.ok(prevEtag && prevEtag.startsWith('W/"'), 'preview carries a weak ETag');
+  assert.match(prev.headers.get('cache-control') || '', /private/, 'preview is privately cacheable');
+  await prev.arrayBuffer();
+
+  const revalidate = await fetch(`${base}/api/preview?path=${encodeURIComponent(chairLive.preview.path)}`, {
+    headers: { 'If-None-Match': prevEtag },
+  });
+  assert.strictEqual(revalidate.status, 304, 'unchanged preview revalidates to 304');
+  assert.strictEqual((await revalidate.text()).length, 0, '304 carries no body');
+
+  const byDate = await fetch(`${base}/api/preview?path=${encodeURIComponent(chairLive.preview.path)}`, {
+    headers: { 'If-Modified-Since': prev.headers.get('last-modified') || '' },
+  });
+  assert.strictEqual(byDate.status, 304, 'If-Modified-Since also revalidates to 304');
 
   const outside = await fetch(`${base}/api/preview?path=${encodeURIComponent(path.join(ROOT, 'outside.png'))}`);
   assert.strictEqual(outside.status, 403, 'paths outside library rejected');
