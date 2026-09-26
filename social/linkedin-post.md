@@ -1,26 +1,44 @@
-# LinkedIn post
+# LinkedIn post — v0.4.0
 
 ---
 
-I finally built the thing I kept wishing existed.
+0.4.0 is out, and it's the release that removes the most boring part of the
+whole app.
 
-As someone juggling thousands of asset folders across multiple drives, staying
-organized never really clicked. So I made **Poly Vault** — a free, open-source
-desktop app that turns any folder into a clean, searchable asset library.
-Preview cards, tags, descriptions, the whole bit. And the part I'm proudest
-of: one click queues an asset, and it lands straight in your Unity 6 project
-as a copy. Your library never gets touched.
+Until now, tagging and describing an asset meant clicking *Fetch from store*,
+one asset at a time. In 0.4.0 that's gone. Point Poly Vault at your asset
+folders and walk away: the main process looks each new asset up in the Unity
+Asset Store in the background (throttled, deduplicated, cancellable), saves the
+description, and derives tags from the store name, category and description
+text. You come back to a library that's already organised.
 
-It also happens to be fully offline — no cloud, no accounts, no tracking.
+**Update** (which replaces *Rescan*) works the same way — it matches your
+selection. An asset updates that asset. A folder updates its subtree. A library
+updates the whole library. Nothing selected means everything. Store failures are
+retried in the background and always report a reason, so nothing fails silently
+any more.
 
-Only 200 words could've filled this but I kept it short 😉 Windows, Linux, and
-macOS installers + the Unity package are out now:
+Also in this release:
 
-https://github.com/xeeshanqaswar/Poly-Vault
+- One tag editor for assets, folders *and* libraries, with a *cascade to n
+  items* toggle — tag a folder once and the whole subtree follows.
+- Descriptions edit in place, and text you write by hand is never overwritten by
+  a lookup that finds nothing.
+- The details panel got quieter: *Import files* lists only `.unitypackage`
+  files, and the footer is just the full-width *Open folder* button.
+- Visual refresh: hairline cards on soft ambient gradients, Inter typography,
+  lucide icons throughout.
 
-Would genuinely love to hear what's missing in your workflow — this is a hobby
-project that I'd love to shape around real needs. 🙌
+Installers for Windows, Linux (AppImage + deb) and macOS (Apple Silicon +
+Intel), plus the Unity 6 UPM package — all in the release:
+https://github.com/xeeshanqaswar/Poly-Vault/releases/tag/v0.4.0
 
-#PolyVault #Unity #GameDev #OpenSource
+Still free, still MIT, still fully offline — your library is never modified, and
+imports are copies into `Assets/PolyVaultImports/`.
+
+If your tagging workflow still involves a spreadsheet, this one is for you.
+Feedback welcome, especially on where the auto-tags get it wrong.
+
+#PolyVault #Unity #GameDev #IndieDev #OpenSource #AssetManagement
 
 ---
