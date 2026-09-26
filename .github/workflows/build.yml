@@ -41,6 +41,9 @@ jobs:
       - name: Run headless tests
         run: node tests/smoke.js
 
+      # Signs + notarizes when the Apple secrets are present, otherwise builds a
+      # plain unsigned app (identity discovery off, `identity: null`) so the job
+      # does not fail on runners with no Developer ID certificate.
       - name: Build (macOS — sign + notarize when credentials are set)
         if: matrix.os == 'macos-latest'
         env:
@@ -49,7 +52,10 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: npm run dist:mac -- --publish never --config.mac.notarize=${{ (secrets.APPLE_ID != '' && secrets.APPLE_APP_SPECIFIC_PASSWORD != '') && 'true' || 'false' }}
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.MAC_CSC_LINK != '' }}
+          SIGN_ARGS: ${{ secrets.MAC_CSC_LINK != '' && '' || '--config.mac.identity=null' }}
+          NOTARIZE: ${{ (secrets.APPLE_ID != '' && secrets.APPLE_APP_SPECIFIC_PASSWORD != '') && 'true' || 'false' }}
+        run: npm run dist:mac -- --publish never --config.mac.notarize=${{ env.NOTARIZE }} ${{ env.SIGN_ARGS }}
 
       - name: Build (${{ matrix.script }})
         if: matrix.os != 'macos-latest'
