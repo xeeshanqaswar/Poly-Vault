@@ -1,12 +1,12 @@
-# Poly Vault
-
 <p align="center">
-  <img src="branding/logo-horizontal.png" alt="Poly Vault" width="400" />
+  <img src="branding/logo-horizontal.png" alt="Poly Vault" width="360" />
 </p>
 
-**Your personal 3D & 2D asset library — with a one-click pipeline into Unity 6.**
+# Poly Vault
 
-<p>
+**Every 3D & 2D asset you own, in one searchable library — with one-click import into Unity 6.**
+
+<p align="center">
   <a href="https://github.com/xeeshanqaswar/Poly-Vault"><img src="https://img.shields.io/badge/project-Poly%20Vault-1f6feb" alt="Project"></a>
   <a href="https://github.com/xeeshanqaswar/Poly-Vault/releases"><img src="https://img.shields.io/badge/version-0.4.0-1f6feb" alt="Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="License: MIT"></a>
@@ -16,121 +16,122 @@
   <a href="https://github.com/xeeshanqaswar/Poly-Vault/issues"><img src="https://img.shields.io/badge/help-issues-yellow" alt="Issues"></a>
 </p>
 
-Poly Vault turns any folder on your computer into a beautiful, browsable asset
-library. Preview your models and textures, tag and describe them, search them,
-and send them straight into your Unity project — all offline, all on your
-machine. **No cloud, no accounts, no tracking.**
+<p align="center">
+  <img src="docs/assets/screenshot.png" alt="Poly Vault — browsing a library of 3D and 2D assets" width="820" />
+</p>
 
-Built by **Zeeshan Qaswar**.
+If you have ever lost track of that prop pack you downloaded eight months ago,
+this is for you. Point Poly Vault at your asset folders and it turns them into
+a tidy, searchable library — thumbnails, tags and notes — then drops any asset
+into your Unity project without you going back to Explorer.
 
----
-
-## Table of contents
-
-- [Table of contents](#table-of-contents)
-- [Highlights](#highlights)
-- [Screenshot](#screenshot)
-- [Quick start](#quick-start)
-- [How the app works](#how-the-app-works)
-- [Folder layout convention](#folder-layout-convention)
-- [Importing into Unity (Unity 6)](#importing-into-unity-unity-6)
-- [Data & privacy](#data--privacy)
-- [Power-user controls](#power-user-controls)
-- [Development](#development)
-- [Packaging for release](#packaging-for-release)
-- [Documentation](#documentation)
-- [Contributing](#contributing)
-- [Changelog](#changelog)
-- [License](#license)
-
----
-
-## Highlights
-
-- **Browse everything** — libraries, nested folders, and every asset as a
-  preview card, with a tree on the left and thumbnails in the middle.
-- **Search & filter** — full-text-ish search across the current view and a
-  toolbar **Tags** dropdown that AND-filters cards by tag, with live chips and
-  an active-filter badge.
-- **Understand your library** — every folder shows total assets, files, size,
-  and what it contains (meshes, textures, audio, video, fonts, materials,
-  scripts…).
-- **Describe & organise** — add tags and descriptions to any asset, folder, or
-  library, stored locally and searchable. Folder and library tags cascade to
-  everything inside them in one click, with suggestions from tags you already use.
-- **Automatic Asset Store enrichment** — every newly discovered asset is looked
-  up in the Unity Asset Store for you: the description is saved and tags are
-  derived from the store name, category, and description, so new assets arrive
-  already described and tagged. The **Update** button re-scans and re-checks
-  whatever is selected (asset → folder → library → everything), with a
-  `Fetching descriptions… n/total` progress bubble. Descriptions you write by
-  hand are never overwritten.
-- **Move through folders** — a **Collapse all** button folds the whole sidebar
-  tree at once, and a full-width **Open folder** button in the details panel
-  opens any library, folder, or asset's directory in the OS file explorer.
-- **One-click Unity import** — queue any asset; the bundled Unity 6 Editor
-  plugin copies it into `Assets/PolyVaultImports/…`. `.unitypackage` files open
-  Unity's import dialog, everything else is copied automatically.
-- **Live Unity connection indicator** — the toolbar shows *unity: connected*
-  as long as the Editor plugin is actively talking to the bridge.
-- **Make it yours** — 3 themes (Default / Dark / Light), offline-bundled Inter
-  font with lucide icons, resizable side panels, and a clean, menu-bar-free,
-  macOS-inspired window (no File/Edit/View menu — everything is in the UI).
-- **Truly local** — everything is stored in JSON on your machine; the bridge
-  binds to `127.0.0.1` and serves no secrets.
-
-> **New in 0.4** — new assets now describe and tag themselves from the Unity
-> Asset Store automatically, **Update** re-checks exactly what you have
-> selected, and the whole UI got a bento refresh (hairline cards, Inter, lucide
-> icons).
->
-> **New in 0.3** — the app is now called **Poly Vault** (it was "Asset Vault").
-> Your existing libraries, tags, and descriptions are carried over
-> automatically on first launch.
-
----
-
-## Screenshot
+**No cloud. No account. No tracking.** Your library is never uploaded, and your
+original files are never modified.
 
 <p align="center">
-  <img src="docs/assets/screenshot.png" alt="Poly Vault — browsing a 3D/2D asset library" width="720" />
-  <br/>
-  <em>Poly Vault 0.4 — library tree, preview cards, and the details panel.</em>
+  <a href="https://github.com/xeeshanqaswar/Poly-Vault/releases"><b>Download Poly Vault</b></a>
+  &nbsp;·&nbsp;
+  <a href="#what-it-does">See what it does</a>
+  &nbsp;·&nbsp;
+  <a href="#get-it">Windows · Linux · macOS</a>
 </p>
 
 ---
 
-## Quick start
+## What it does
 
-### Option A — installers (recommended)
+- **Sees everything you already own.** Point it at any folder on your computer.
+  Every model, texture, sound, video, font and script inside becomes a card with
+  a thumbnail, sorted into a folder tree you can click through.
+- **Finds things in seconds.** Search by name, description or tag. Combine tags
+  to narrow thousands of files down to just the props you need for one scene.
+- **Labels things once.** Add a tag or a note to a single asset, a whole folder,
+  or your entire library. Tag a folder once and everything inside it inherits
+  that tag.
+- **Fills in the blanks for you.** Drop in a new asset pack and Poly Vault looks
+  it up in the Unity Asset Store, writes a real description, and suggests tags —
+  so a fresh download is never a blank card.
+- **Sends assets to Unity in one click.** With the bundled Unity 6 add-on, an
+  import is a single click and the files land in your project, tags attached.
+  Your library is only ever read, never moved or modified.
+- **Tells you when Unity is ready.** A small indicator shows when the Editor
+  add-on is connected, and each import shows its progress as it happens.
+- **Looks like it belongs on your desktop.** Light, dark and default themes,
+  resizable panels, and no menu-bar clutter.
 
-| Platform | Get it | Install |
+## Who it's for
+
+- Unity artists and game developers with a growing folder of downloaded assets
+- Anyone who wants their models, textures and audio organised and searchable
+- Teams who need to know exactly where an asset came from and what it contains
+- People who don't want their asset library sitting in someone else's cloud
+
+## Get it
+
+| Platform | Download | Install |
 | --- | --- | --- |
-| **Windows** | `dist/PolyVault-Setup-0.4.0.exe` | Run the NSIS installer. |
-| **Linux** | `dist/PolyVault-0.4.0-x86_64.AppImage` or `PolyVault-0.4.0-amd64.deb` | AppImage: `chmod +x` then run. Deb: `sudo dpkg -i`. |
-| **macOS** | build from source or grab the GitHub Actions artifacts (the DMG must be produced on a Mac) | Open the DMG, drag to Applications. |
+| **Windows** | `PolyVault-Setup-0.4.0.exe` | Run the installer. |
+| **Linux** | `PolyVault-0.4.0-x86_64.AppImage` or `PolyVault-0.4.0-amd64.deb` | `chmod +x` and run it, or `sudo dpkg -i`. |
+| **macOS** | `PolyVault-0.4.0-arm64.dmg` (or `x64.dmg`) | Open the DMG and drag the app to Applications. |
 
-The Windows exe is **unsigned**, so SmartScreen may ask for *More info →
-Run anyway* the first time. macOS builds are **signed and notarized only when
-Apple credentials are configured** in CI (see below); until then, an unsigned
-build triggers Gatekeeper — either right-click the app and choose **Open**, or
-run `xattr -dr com.apple.quarantine /Applications/Poly\ Vault.app` from a
-terminal. See [Packaging & signing](docs/TECHNICAL.md#packaging--signing).
+Grab them from the [releases page](https://github.com/xeeshanqaswar/Poly-Vault/releases).
+macOS DMGs are produced by our build servers; Linux and Windows builds are
+attached directly to each release.
 
-### Option B — run from source
+> **First run?** Windows may show a SmartScreen warning because the installer is
+> unsigned — choose **More info → Run anyway**. On macOS, right-click the app and
+> choose **Open** the first time. Nothing is broken; the app is simply not
+> signed with a paid certificate.
 
-Requirements: [Node.js](https://nodejs.org) 20+ (tested on 24 LTS).
+**In three steps:** install the app → click **Add Library** and pick your asset
+folder → browse, tag and search. That is the whole setup. Unity import is
+optional and takes about a minute.
 
-```powershell
-npm install
-npm start
-```
+## Getting assets into Unity
+
+1. **Add the Poly Vault add-on to your project** — download it from the
+   [releases page](https://github.com/xeeshanqaswar/Poly-Vault/releases):
+   `PolyVault-Unity-0.4.0.zip` (or `.tgz`). In Unity, open **Window → Package
+   Manager → + → Add package from disk** and pick the `package.json` inside.
+2. Open **Window → Poly Vault** in Unity — that's it, nothing else to configure.
+3. From the desktop app, press **Import to Unity** on any asset. It is copied
+   into `Assets/PolyVaultImports/…` with its tags, and Unity shows the progress
+   as it lands.
+
+`.unitypackage` files open Unity's own import dialog so you stay in control;
+everything else is copied automatically. Your original files are never moved,
+renamed or deleted.
+
+## Your data stays yours
+
+- Everything is stored in **plain JSON files** in your app data folder
+  (`%APPDATA%\Poly Vault`, `~/.config/Poly Vault`, or
+  `~/Library/Application Support/Poly Vault`). Back it up by copying a folder.
+- **No telemetry, no accounts, no cloud sync.** The app talks to nothing except
+  your own machine.
+- The single exception is a description lookup in the Unity Asset Store for each
+  new asset, sent from your machine to the store's public page. Nothing else is
+  ever requested.
+- The local helper the app uses binds to `127.0.0.1` only — it is not reachable
+  from your network.
+
+## What's new
+
+- **0.4** — new assets now describe and tag themselves from the Unity Asset
+  Store automatically, **Update** re-checks exactly what you have selected
+  (asset → folder → library → everything), and the interface got a full visual
+  refresh.
+- **0.3** — renamed from *Asset Vault* to *Poly Vault*. Existing libraries,
+  tags and descriptions carried over automatically.
 
 ---
 
-## How the app works
+<details>
+<summary><b>For developers, contributors and power users</b> — architecture, API, folder rules, dev commands</summary>
 
-1. **Add a library** — pick any folder that contains *category subfolders*.
+## How it works
+
+1. **Add a library** — pick any folder containing *category subfolders*.
 2. The app scans it (filesystem only; nothing leaves your machine) and shows it
    as a **tree on the left** and **preview cards in the middle**.
 3. Click any **folder or card** → the **details panel on the right** shows
@@ -143,12 +144,9 @@ npm start
    description and derived tags fill in on their own. **Update** re-scans and
    re-checks just what you have selected.
 
-Card selection is flicker-free (only the highlight and details update), 
+Card selection is flicker-free (only the highlight and details update),
 rescans skip repainting when nothing changed, and resizing the three-pane
 layout is pointer-driven with the widths remembered between runs.
-
-> The only outbound request the app ever makes is the Asset Store description
-> lookup, and it happens on your machine — no telemetry, no accounts, no keys.
 
 ## Folder layout convention
 
@@ -188,21 +186,9 @@ The rules that decide what shows up:
 - Drop an empty **`.assetvault-ignore`** (or `.nomedia`) file into any folder
   to skip it (and its whole subtree).
 
----
+## Unity 6 add-on reference
 
-## Importing into Unity (Unity 6)
-
-Install the bundled Editor package once per project:
-
-```powershell
-# from this repo
-Copy-Item -Recurse unity-plugin/PolyVault <yourProject>/Packages/PolyVault
-```
-
-…or in Unity: **Window → Package Manager → `+` → Add package from disk**, then
-pick `unity-plugin/PolyVault/package.json`.
-
-Then open **Window → Poly Vault → Poly Vault** and you'll get:
+After installing the package, **Window → Poly Vault → Poly Vault** exposes:
 
 - **Server URL** — `http://127.0.0.1:7100` (must match the desktop app).
 - **Sync in background** — polls the app on an interval while Unity is open.
@@ -210,35 +196,10 @@ Then open **Window → Poly Vault → Poly Vault** and you'll get:
   (those open Unity's interactive import dialog).
 - **Import now** — manual, always-interactive import per job.
 
-Jobs you queue from the desktop app are picked up here, marked **processing**,
+Jobs queued from the desktop app are picked up here, marked **processing**,
 imported, and reported back — the desktop app's job badge updates within
 seconds. Files are **copies**; nothing is ever moved or deleted from your
 library. Tags are written alongside each import as `polyvault.tags.json`.
-
----
-
-## Data & privacy
-
-Everything is stored **locally** in the app data folder
-(`%APPDATA%\Poly Vault` on Windows, `~/.config/Poly Vault` on Linux,
-`~/Library/Application Support/Poly Vault` on macOS):
-
-| File | Contents |
-| --- | --- |
-| `asset-vault-settings.json` | Registered libraries + server settings |
-| `asset-vault-tags.json` | Tags per asset, folder, or library |
-| `asset-vault-meta.json` | Descriptions + store lookup results (`name`, `url`, `found`, `fetchedAt`) |
-| `asset-vault-jobs.json` | Import job history |
-
-- The app is **offline-first**: no telemetry, no accounts, no cloud sync.
-- The only outbound request is the Unity Asset Store description lookup, sent
-  from the main process to the store's public page — nothing else, ever.
-- The local bridge binds to `127.0.0.1` only; no payload is ever served to
-  other hosts.
-- Pre-0.3 data under a legacy `…/Asset Vault` folder is migrated
-  automatically.
-
----
 
 ## Power-user controls
 
@@ -255,20 +216,17 @@ and the test suite:
 The bridge port/host can also be changed in `asset-vault-settings.json`
 (`server` object); the Unity plugin's Server URL must then match.
 
----
-
 ## Development
 
+Requirements: [Node.js](https://nodejs.org) 20+ (tested on 24 LTS).
+
 ```powershell
+npm install
 npm run smoke   # headless scanner + bridge test (no Electron window)
 npm run e2e     # boots the real app with a fixture library and checks the UI
 npm start       # run the app (dev)
 npm run icons   # regenerate icons / logo / bundled fonts (only after artwork changes)
 ```
-
-See [docs/TECHNICAL.md](docs/TECHNICAL.md) for the full developer guide:
-architecture, IPC, data model, scanner, HTTP API reference, job lifecycle,
-storage & migration, security model, packaging internals, and test harness.
 
 ## Packaging for release
 
@@ -289,8 +247,6 @@ The Windows `exe` is unsigned by default (SmartScreen prompt);
 notarisation. AppImage/deb and DMG builds must match the host OS (or use the
 CI workflow).
 
----
-
 ## Documentation
 
 | Doc | What it covers |
@@ -300,15 +256,11 @@ CI workflow).
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to report bugs and submit changes |
 
----
-
 ## Contributing
 
 Contributions are welcome — bug reports, fixes, and feature ideas. Please read
 [CONTRIBUTING.md](CONTRIBUTING.md) first; the important bits: run the smoke and
 e2e tests, keep changes scoped, and match the existing code style.
-
----
 
 ## Changelog
 
@@ -317,3 +269,11 @@ See [CHANGELOG.md](CHANGELOG.md) for the full release history.
 ## License
 
 [MIT](LICENSE) © Zeeshan Qaswar. Unity support is provided by the bundled **Poly Vault** Editor package under `unity-plugin/PolyVault`.
+
+</details>
+
+---
+
+<p align="center">
+  Built by <a href="https://github.com/xeeshanqaswar">Zeeshan Qaswar</a> · MIT licensed · <a href="https://github.com/xeeshanqaswar/Poly-Vault/issues">Report an issue</a>
+</p>
