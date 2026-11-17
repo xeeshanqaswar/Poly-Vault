@@ -111,7 +111,32 @@ previews), tag derivation (`["furniture","low-poly"]`), meta merge protection
 for hand-written descriptions, job pruning, path containment, JSON store
 corruption recovery, and the bridge's tag normalization/scope sanitising.
 
+The bridge also has an integration test that binds an ephemeral port and walks
+the real contract: status, `/api/library` scan, tag containing guard (403),
+tag round-trip, preview `200` + `If-None-Match` `304`, import job creation, and
+`unitySeenAt` advancing on a Unity poll.
+
 The Electron smoke/e2e suites still run against `src/` and are unchanged.
+
+### Verification on this branch
+
+```
+cargo test           18 passed, 0 failed
+node tests/smoke.js  SMOKE PASS
+node tests/e2e.js    E2E PASS
+```
+
+Manual run of `src-tauri\target\debug\poly-vault.exe` with
+`ASSETVAULT_USER_DATA`, `ASSETVAULT_BOOT_LIBRARY` and `ASSETVAULT_NO_ENRICH=1`:
+bound `127.0.0.1:7100`, `/api/status` reported the registered library and a
+non-zero `unitySeenAt` (the webview had loaded `ui/` and was polling), and
+`/api/library` returned the fixture scan with preview, kinds and timestamps.
+
+`tests/e2e.js` also carried a pre-existing race: it asserted the
+"Re-import to Unity" label immediately after selecting the card, while the
+renderer only refreshes job state on a 5 s poll, so the suite failed on `main`
+(`d3b4f84`) too. The wait now includes the completed-job button state.
+
 
 ## Remaining work before this could replace Electron
 

@@ -188,10 +188,17 @@ async function waitForDiag(action, filter, what, ms = 15000) {
   assert.strictEqual(containerDiag.pathTexts, 0, 'path text is no longer rendered in the footer');  console.log(`container detail ok: metaRows=${containerDiag.metaRows}, descendant tag chips=${containerDiag.contTagChips}, cascade=${containerDiag.cascadeToggles}`);
 
   // Click the first card -> asset detail renders again.
+  // The renderer refreshes job state on a 5 s poll, so wait for the completed
+  // job to land instead of asserting the very first rendered frame.
   const assetDiag = await waitForDiag(
     'selectFirstCard',
-    (j) => j.detail === 'Chair' && j.view === 'asset' && j.metaRows >= 5 && j.descEditors >= 1,
-    'asset detail to render after selecting a card'
+    (j) =>
+      j.detail === 'Chair' &&
+      j.view === 'asset' &&
+      j.metaRows >= 5 &&
+      j.descEditors >= 1 &&
+      j.importBtn === 'Re-import to Unity',
+    'asset detail to show the completed import job'
   );
   assert.strictEqual(assetDiag.cascadeToggles, 0, 'assets tag themselves only (no cascade toggle)');
   assert.strictEqual(assetDiag.tagInputs, 1, 'asset detail has a tag input');
