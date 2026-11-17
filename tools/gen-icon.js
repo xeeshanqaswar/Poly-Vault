@@ -272,4 +272,13 @@ if (logoSourceH) {
 }
 writePixelPng(path.join(ASSET_DIR, 'icon.png'), 256, 256, makePixelAt(256));
 
-console.log(`icons written to ${OUT_DIR} (icon.png, icon.ico, icon.icns) + ${ASSET_DIR} (logo.png, icon.png)`);
+// Tauri (Rust port) icons — same art, sizes the bundler expects.
+const TAURI_DIR = path.join(ROOT, 'src-tauri', 'icons');
+writePixelPng(path.join(TAURI_DIR, '32x32.png'), 32, 32, makePixelAt(32));
+writePixelPng(path.join(TAURI_DIR, '128x128.png'), 128, 128, makePixelAt(128));
+writePixelPng(path.join(TAURI_DIR, '128x128@2x.png'), 256, 256, makePixelAt(256));
+writePixelPng(path.join(TAURI_DIR, 'icon.png'), 512, 512, makePixelAt(512));
+fs.copyFileSync(path.join(OUT_DIR, 'icon.ico'), path.join(TAURI_DIR, 'icon.ico'));
+fs.copyFileSync(path.join(OUT_DIR, 'icon.icns'), path.join(TAURI_DIR, 'icon.icns'));
+
+console.log(`icons written to ${OUT_DIR} (icon.png, icon.ico, icon.icns) + ${ASSET_DIR} (logo.png, icon.png) + ${TAURI_DIR}`);

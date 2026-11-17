@@ -9,3 +9,4 @@ build/*.ico
 build/*.png
 .DS_Store
 Thumbs.db
+src-tauri/target/
