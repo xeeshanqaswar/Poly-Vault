@@ -30,6 +30,15 @@ All notable changes to **Poly Vault** are documented here. Format follows
   tools, guards, session tracking and `/api/agents` route, covered by unit and
   HTTP tests.
 
+### Fixed
+
+- **Agents and Tags popovers were layered under the asset grid.** The toolbar's
+  `backdrop-filter` creates a stacking context, so the popover could not rise
+  above the cards and clicks landed on the grid behind it. The toolbar now owns
+  an explicit stacking layer, popovers use an opaque `--bg-pop` surface (no more
+  cards bleeding through), and the e2e probe asserts the panel is the topmost
+  element at its centre.
+
 ## [0.4.2] — 2026-11-07
 
 Performance optimizations and UI usability enhancements across the Electron renderer, library scanner, and bridge server.

@@ -338,7 +338,7 @@ harness. Actions: `selectRel:<rel>`, `selectFirstCard`, `update` (alias
 `libs, treeRows, cards, dot, detail, view, metaRows, descEditors, tagInputs,
 cascadeToggles, tagSuggestions, contTagChips, updateBtn, updateStatus,
 updateStatusShown, importHeading, importFiles, fileRows, openPathBtns,
-pathTexts, agentsBtn, agentsCount, agentRows, exportRows, agentsOpen, theme,
+pathTexts, agentsBtn, agentsCount, agentRows, exportRows, agentsOpen, agentsHit, theme,
 splitters, sbW, trw, rr, brandImg, brandW, accent, font, bg, text, popRows,
 cnt, unity, unityDot`.
 

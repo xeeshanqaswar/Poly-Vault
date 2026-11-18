@@ -329,7 +329,7 @@ Response metrics include `libs`, `treeRows`, `cards`, `dot`,
 `tagInputs`, `cascadeToggles`, `tagSuggestions`, `contTagChips`, `updateBtn`,
 `updateStatus`, `updateStatusShown`, `importHeading`, `importFiles`,
 `fileRows`, `openPathBtns`, `pathTexts`, `agentsBtn`, `agentsCount`, `agentRows`,
-`exportRows`, `agentsOpen`, `theme`, `splitters`, `sbW`, `trw`
+`exportRows`, `agentsOpen`, `agentsHit`, `theme`, `splitters`, `sbW`, `trw`
 (first tree-row paddings).
 
 ---
@@ -459,6 +459,11 @@ warm near-black `#250e17`):
 - Surfaces: toolbar/sidebar/grid/detail are rounded-xl cards on hairline
   borders (`white/10` dark, `black/10` light) with translucent backdrops over
   body radial gradients; spacing is an 8px grid.
+- Popovers (Tags, Agents) use the opaque `--bg-pop` surface, and the toolbar
+  carries `position: relative; z-index: 40`. Its `backdrop-filter` creates a
+  stacking context, so without that z-index a child popover is painted under the
+  later grid and cannot be clicked; `__diag.agentsHit` asserts the topmost
+  element at the panel's centre is still inside the panel.
 - Branding: the toolbar shows the **horizontal wordmark**
   (`branding/logo-horizontal.png` → `ui/assets/logo.png`, aspect-preserving
   scale); the favicon/app image is `ui/assets/icon.png` (square art from

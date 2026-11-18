@@ -16,6 +16,7 @@
   --glow-c: rgba(96, 60, 130, 0.22);
   --bg-panel: rgba(30, 20, 26, 0.62);
   --bg-panel-2: rgba(43, 30, 37, 0.6);
+  --bg-pop: #24181e;
   --bg-hover: rgba(255, 255, 255, 0.06);
   --border: rgb(255 255 255 / 0.10);
   --border-strong: rgb(255 255 255 / 0.18);
@@ -45,6 +46,7 @@
   --glow-c: rgba(30, 40, 70, 0.42);
   --bg-panel: rgba(17, 19, 24, 0.6);
   --bg-panel-2: rgba(28, 31, 40, 0.62);
+  --bg-pop: #161820;
   --bg-hover: rgba(255, 255, 255, 0.06);
   --border: rgb(255 255 255 / 0.09);
   --border-strong: rgb(255 255 255 / 0.16);
@@ -70,6 +72,7 @@
   --glow-c: rgba(150, 140, 255, 0.10);
   --bg-panel: rgba(255, 255, 255, 0.74);
   --bg-panel-2: #ffffff;
+  --bg-pop: #ffffff;
   --bg-hover: rgba(0, 0, 0, 0.05);
   --border: rgb(0 0 0 / 0.09);
   --border-strong: rgb(0 0 0 / 0.16);
@@ -142,6 +145,8 @@ button, input, select, textarea { font-family: inherit; letter-spacing: inherit;
   gap: var(--space);
   padding: var(--space) 12px;
   flex: none;
+  position: relative;
+  z-index: 40;
 }
 .brand { display: flex; align-items: center; min-width: 0; }
 .brand-mark {
@@ -211,7 +216,7 @@ button, input, select, textarea { font-family: inherit; letter-spacing: inherit;
   width: 250px;
   max-height: 340px;
   overflow: auto;
-  background: var(--bg-panel-2);
+  background: var(--bg-pop);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-pop);

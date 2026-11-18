@@ -267,10 +267,12 @@ async function waitForDiag(action, filter, what, ms = 15000) {
 
   const agentDiag = await waitForDiag(
     'agentspop',
-    (j) => j.agentsOpen && j.agentRows >= 1 && j.exportRows >= 1,
-    'agents panel to list the connected agent and its export'
+    (j) => j.agentsOpen && j.agentsHit === true && j.agentRows >= 1 && j.exportRows >= 1,
+    'agents panel to list the connected agent and its export above the grid'
   );
-  console.log(`agents ok: rows=${agentDiag.agentRows}, exports=${agentDiag.exportRows}`);
+  console.log(
+    `agents ok: rows=${agentDiag.agentRows}, exports=${agentDiag.exportRows}, hitsTopmost=${agentDiag.agentsHit}`
+  );
   await waitForDiag('agentspopoff', (j) => !j.agentsOpen, 'agents panel to close');
 
   // Theme switching + resizable splitters present.

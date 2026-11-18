@@ -861,7 +861,11 @@ function initTagPopover() {
     e.stopPropagation();
     const willOpen = pop.classList.contains('hidden');
     pop.classList.toggle('hidden', !willOpen);
-    if (willOpen) renderTagPopover();
+    if (willOpen) {
+      const agentsPop = $('#agents-popover');
+      if (agentsPop) agentsPop.classList.add('hidden');
+      renderTagPopover();
+    }
   });
   pop.addEventListener('click', (e) => e.stopPropagation());
   document.addEventListener('click', (e) => {
