@@ -87,6 +87,9 @@ rendering of model/3D files, batch editing, ratings.
 | C25 | Automatic store enrichment | New assets are looked up in the Unity Asset Store automatically: description saved, tags derived; manual descriptions never overwritten | Main process |
 | C26 | Tag suggestions | Tag editor suggests existing tags in the app while typing | Details panel |
 | C27 | Import file list | "Import files" lists only `.unitypackage` filenames | Details panel |
+| C28 | Agent access (MCP) | Local Streamable HTTP MCP server exposing library search, asset detail and safe export into a project folder | `POST /mcp` |
+| C29 | Agent panel | Toolbar **Agents** popover: connected sessions (name, version, calls, last seen) and recent exports | Toolbar |
+| C30 | Export log | Every agent export recorded with asset, destination, counts, bytes and agent | `asset-vault-exports.json` |
 
 ## 4. Library concept & scanning rules
 
@@ -245,6 +248,9 @@ RequestBody cap: **2 MB**.
 | POST | `/api/unity/import-jobs/{id}/complete` | Complete a job (`{ note }`) |
 | POST | `/api/unity/import-jobs/{id}/failed` | Fail a job (`{ note }`) |
 | GET | `/api/preview?path=…` | Preview image stream |
+| GET | `/api/agents` | Connected agent sessions + recent agent exports + MCP URL |
+| POST | `/mcp` | MCP Streamable HTTP endpoint for coding agents |
+| DELETE | `/mcp` | Close an agent session (`Mcp-Session-Id`) |
 | GET | `/__diag?action=…` | Test-automation probe (renderer metrics) |
 
 ### 9.1 `GET /api/status` → 200
@@ -317,6 +323,7 @@ RequestBody cap: **2 MB**.
 | `POST /api/update` | 400 if `scope` is malformed; unknown scope types fall back to `all` |
 | `POST /api/import-job` | 400 if `assetFolder`/`importables` missing/invalid; 403 if folder outside a library |
 | `GET /api/preview` | 400 unsupported extension; 403 outside a library; 404 missing file; 304 when `If-None-Match`/`If-Modified-Since` matches |
+| `POST /mcp` | 400 malformed JSON; unknown methods → JSON-RPC `-32601`; export guards below |
 | all bodies | `readBody` cap 2 MB |
 
 `withinLibrary()` resolves with `path.resolve` and permits the library root and
@@ -326,12 +333,46 @@ all descendants; nothing else.
 
 Executes sandboxed JS in the renderer and returns UI metrics for the test
 harness. Actions: `selectRel:<rel>`, `selectFirstCard`, `update` (alias
-`rescan`), `theme:<name>`, `tagpop`, `tagpopoff`, `tag:<tagName>`. Metrics:
+`rescan`), `theme:<name>`, `tagpop`, `tagpopoff`, `tag:<tagName>`, `agentspop`,
+`agentspopoff`. Metrics:
 `libs, treeRows, cards, dot, detail, view, metaRows, descEditors, tagInputs,
 cascadeToggles, tagSuggestions, contTagChips, updateBtn, updateStatus,
 updateStatusShown, importHeading, importFiles, fileRows, openPathBtns,
-pathTexts, theme, splitters, sbW, trw, rr, brandImg, brandW, accent, font, bg,
-text, popRows, cnt, unity, unityDot`.
+pathTexts, agentsBtn, agentsCount, agentRows, exportRows, agentsOpen, theme,
+splitters, sbW, trw, rr, brandImg, brandW, accent, font, bg, text, popRows,
+cnt, unity, unityDot`.
+
+### 9.5 `POST /mcp` — coding-agent MCP server
+
+Streamable HTTP MCP endpoint (protocol `2025-06-18`) on the same loopback
+bridge. JSON-RPC requests are answered as `application/json`; notifications get
+`202`. The first `initialize` response carries an `Mcp-Session-Id` header that
+clients echo on later calls; `DELETE /mcp` closes a session.
+
+Supported methods: `initialize`, `ping`, `tools/list`, `tools/call`,
+`resources/list` (empty), `prompts/list` (empty), `notifications/*`.
+
+| Tool | Arguments | Behaviour |
+| --- | --- | --- |
+| `poly_vault_list_libraries` | — | `{ libraries: [{ libraryId, name, path, assetCount, fileCount }] }` |
+| `poly_vault_search_assets` | `query?`, `libraryId?`, `kind?`, `tag?`, `limit?` | Compact summaries from a fresh scan |
+| `poly_vault_get_asset` | `assetId` or `name` (+ `libraryId?`) | Summary + category, dates, preview, importables |
+| `poly_vault_export_asset` | `assetId`/`name`, `destination`, `subfolder?`, `flatten?`, `overwrite?` | Copies importables (or folder walk) and records the export |
+| `poly_vault_list_exports` | `limit?` | Recent exports, newest first |
+
+Export layout defaults to `destination/<subfolder>/<asset name>/<rel>`; with
+`flatten` files land directly in `destination/<subfolder>/`. Existing targets
+are skipped unless `overwrite: true`. Limits: 2000 files, 2 GB per export, 200
+recorded file paths per record. `destination` must be absolute and is refused
+when it is a filesystem root, inside `WINDIR`/`SystemRoot`/`ProgramFiles`/
+`ProgramFiles(x86)`, inside a registered library, or inside the asset's own
+folder. `subfolder` must be relative and cannot contain `..`.
+
+`GET /api/agents` → `{ ok, agents[], exports[], mcp: { url, protocolVersion,
+tools } }`. Sessions live in memory and are reported `connected` for 10 minutes
+after their last call; the 20 newest are listed. Exports persist newest-last in
+`asset-vault-exports.json` (capped at 200) and the newest 25 are returned.
+The renderer polls this endpoint every 5 s for the **Agents** popover.
 
 ## 10. Job lifecycle
 
@@ -421,6 +462,7 @@ Icons are inline lucide.dev SVGs (stroke via `currentColor`, `ui/renderer.js`
 | `asset-vault-tags.json` | `{ tags: { [absPath]: string[] } }` |
 | `asset-vault-meta.json` | `{ meta: { [absPath]: { description, name, url, found, fetchedAt } } }` |
 | `asset-vault-jobs.json` | `{ jobs: Job[] }` |
+| `asset-vault-exports.json` | `{ exports: ExportRecord[] }` (newest last, capped at 200) |
 
 **Migration:** pre-0.3 userData was `…/Asset Vault`; on first launch under the
 new name, `migrateUserData()` copies the four JSON files into `…/Poly Vault`
@@ -443,6 +485,10 @@ when the target is empty (skipped when `ASSETVAULT_USER_DATA` is set).
 - The single outbound request is the Unity Asset Store description lookup
   (public product page, no credentials, ~150 ms apart). `ASSETVAULT_NO_ENRICH=1`
   disables it entirely and is what the E2E test uses.
+- The MCP endpoint is loopback-only and unauthenticated by design: anything
+  running as the local user can already read these files. It never writes into
+  a registered library, a drive root, a protected system folder, or the asset's
+  own folder; every export is a copy recorded in `asset-vault-exports.json`.
 
 ## 15. Rendering & performance behaviour
 
@@ -453,7 +499,8 @@ when the target is empty (skipped when `ASSETVAULT_USER_DATA` is set).
 - Job polling re-renders only when the job map changes (size/status/`updatedAt`).
 - Card selection never rebuilds the grid.
 - Tree is rendered flat with indent-by-depth (no nested `<ul>`).
-- Barriers: `refreshLibrary` 20 s, `pollJobs` 5 s, `pollUnityStatus` 5 s.
+- Barriers: `refreshLibrary` 20 s, `pollJobs` 5 s, `pollUnityStatus` 5 s,
+  `pollAgents` 5 s.
 
 ## 16. Environment & runtime hooks
 
@@ -480,8 +527,9 @@ OSes on `v*` tags.
 
 | Check | Command | Asserts |
 | --- | --- | --- |
-| Scanner + bridge | `npm run smoke` | detection rules, aggregation, kinds, dates, tags/meta, preview guard, 403s, job state machine |
-| Full app | `npm run e2e` | boot with fixture library, tree/cards, container + asset detail, description editor, theme switching, splitters |
+| Scanner + bridge | `npm run smoke` | detection rules, aggregation, kinds, dates, tags/meta, preview guard, 403s, job state machine, MCP tools + guarded export |
+| Full app | `npm run e2e` | boot with fixture library, tree/cards, container + asset detail, description editor, theme switching, splitters, MCP export + Agents panel |
+| Rust port | `cargo test --manifest-path src-tauri\Cargo.toml` | scanner, bridge routes, MCP session/export parity |
 | Asset pipeline | `npm run icons` | icons/logo/fonts regenerate (used by smoke/e2e build steps) |
 
 Both tests must pass before a release.

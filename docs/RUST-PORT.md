@@ -29,6 +29,7 @@ src-tauri/
     enrichment.rs       meta merge semantics + queue state
     unity_store.rs      Unity Asset Store lookup + HTML extraction (reqwest)
     bridge.rs           axum server implementing the HTTP bridge contract
+    mcp.rs              MCP JSON-RPC tools, guarded exports, agent sessions
     paths.rs            path.resolve equivalent, containment guard, helpers
     time.rs             ISO-8601 / epoch helpers
 ```
@@ -71,6 +72,8 @@ Implemented with axum, same routes, payloads, guards, and status codes:
 | `GET /api/import-jobs` | full queue for the UI |
 | `GET /api/unity/import-jobs` | active queue for the Unity plugin + `unitySeenAt` |
 | `POST /api/unity/import-jobs/:id/:action` | complete/failed/processing + note |
+| `GET /api/agents` | connected agent sessions, recent exports, MCP URL |
+| `POST/DELETE /mcp` | MCP Streamable HTTP (`2025-06-18`), five tools, session header |
 
 `GET /__diag` is a stub: it drove DOM clicks through Electron's
 `executeJavaScript`, which has no Tauri equivalent in the current design.
@@ -96,7 +99,7 @@ shape and keys, so the two builds can be pointed at one data folder for
 comparison:
 
 `asset-vault-settings.json`, `asset-vault-jobs.json`,
-`asset-vault-tags.json`, `asset-vault-meta.json`.
+`asset-vault-tags.json`, `asset-vault-meta.json`, `asset-vault-exports.json`.
 
 ## Tests
 
@@ -109,19 +112,22 @@ cargo test --manifest-path src-tauri/Cargo.toml
 They cover the nested-library scan (asset count, container aggregation, kinds,
 previews), tag derivation (`["furniture","low-poly"]`), meta merge protection
 for hand-written descriptions, job pruning, path containment, JSON store
-corruption recovery, and the bridge's tag normalization/scope sanitising.
+corruption recovery, the bridge's tag normalization/scope sanitising, and the
+MCP hub (destination/subfolder guards, export layout, session snapshot).
 
-The bridge also has an integration test that binds an ephemeral port and walks
-the real contract: status, `/api/library` scan, tag containing guard (403),
-tag round-trip, preview `200` + `If-None-Match` `304`, import job creation, and
-`unitySeenAt` advancing on a Unity poll.
+The bridge also has integration tests that bind an ephemeral port and walk the
+real contract: status, `/api/library` scan, tag containing guard (403),
+tag round-trip, preview `200` + `If-None-Match` `304`, import job creation,
+`unitySeenAt` advancing on a Unity poll, and `initialize` → `tools/list` →
+`poly_vault_export_asset` → `GET /api/agents` over `/mcp` (including a refused
+export into a library).
 
 The Electron smoke/e2e suites still run against `src/` and are unchanged.
 
 ### Verification on this branch
 
 ```
-cargo test           18 passed, 0 failed
+cargo test           22 passed, 0 failed
 node tests/smoke.js  SMOKE PASS
 node tests/e2e.js    E2E PASS
 ```
@@ -132,8 +138,11 @@ Manual runs of `src-tauri\target\debug\poly-vault.exe` and the release build
 `127.0.0.1:7100`, `/api/status` reported the registered library, and
 `/api/library` returned the fixture scan with preview, kinds and timestamps.
 The release run also spawned its WebView2 processes, so `ui/index.html` loaded
-inside the Rust shell. `unitySeenAt` stays `0` without the Unity plugin: only
-the C# plugin polls `/api/unity/import-jobs`, the renderer polls `/api/status`.
+inside the Rust shell. A release run was also driven over `/mcp`: initialize
+returned `poly-vault`, an export copied the fixture mesh into a project folder,
+and `/api/agents` listed the session and export. `unitySeenAt` stays `0`
+without the Unity plugin: only the C# plugin polls `/api/unity/import-jobs`,
+the renderer polls `/api/status`.
 
 `tests/e2e.js` also carried a pre-existing race: it asserted the
 "Re-import to Unity" label immediately after selecting the card, while the
@@ -157,7 +166,7 @@ macOS bundle extension — change it before producing macOS bundles.
 
 1. Port `tests/smoke.js` bridge assertions to a Rust integration test that
    boots the axum router on an ephemeral port (a first slice lives in
-   `bridge.rs` tests: status, scan, tag guard, preview 304, import job).
+   `bridge.rs` tests: status, scan, tag guard, preview 304, import job, MCP).
 2. Port `tests/e2e.js` (Playwright-style window automation) to `tauri-driver`.
 3. Installer packaging: `tauri build` + WiX/NSIS config, updater story,
    Windows code signing, macOS notarization, Linux AppImage/deb.

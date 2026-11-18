@@ -114,6 +114,13 @@ pub fn seed_meta() -> Map<String, Value> {
         .unwrap_or_default()
 }
 
+pub fn seed_exports() -> Map<String, Value> {
+    serde_json::json!({ "exports": [] })
+        .as_object()
+        .cloned()
+        .unwrap_or_default()
+}
+
 pub fn system_time_iso(time: SystemTime) -> Option<String> {
     let since_epoch = time.duration_since(UNIX_EPOCH).ok()?;
     let dt = chrono::DateTime::from_timestamp(

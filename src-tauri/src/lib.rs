@@ -3,6 +3,7 @@ mod bridge;
 mod commands;
 mod enrichment;
 mod library;
+mod mcp;
 mod paths;
 mod state;
 mod store;

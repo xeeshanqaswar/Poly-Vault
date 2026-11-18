@@ -13,8 +13,9 @@ use crate::enrichment::{
     merge_meta_entry, EnrichItem, EnrichmentState, MAX_TAGS, MIN_GAP_MS, WORKERS,
 };
 use crate::library::{scan_all, LibraryEntry, LibraryScan, TreeNode};
+use crate::mcp::{AgentSession, MAX_EXPORTS};
 use crate::paths::{hash_string, key, resolve};
-use crate::store::{seed_jobs, seed_libraries, seed_meta, seed_tags, JsonStore};
+use crate::store::{seed_exports, seed_jobs, seed_libraries, seed_meta, seed_tags, JsonStore};
 use crate::time::now_iso;
 use crate::unity_store;
 
@@ -30,6 +31,8 @@ pub struct AppState {
     pub jobs: Mutex<JsonStore>,
     pub tags: Mutex<JsonStore>,
     pub meta: Mutex<JsonStore>,
+    pub exports: Mutex<JsonStore>,
+    pub agents: Mutex<HashMap<String, AgentSession>>,
     pub unity_seen: AtomicI64,
     pub enrichment: AsyncMutex<EnrichmentState>,
     pub bridge_host: String,
@@ -65,6 +68,11 @@ impl AppState {
                 user_data.join("asset-vault-meta.json"),
                 seed_meta(),
             )),
+            exports: Mutex::new(JsonStore::open(
+                user_data.join("asset-vault-exports.json"),
+                seed_exports(),
+            )),
+            agents: Mutex::new(HashMap::new()),
             unity_seen: AtomicI64::new(0),
             enrichment: AsyncMutex::new(EnrichmentState::default()),
             bridge_host,
@@ -94,6 +102,20 @@ impl AppState {
 
     pub fn save_jobs(&self, jobs: Vec<Value>) {
         lock(&self.jobs).set("jobs", Value::Array(jobs));
+    }
+
+    pub fn exports_list(&self) -> Vec<Value> {
+        lock(&self.exports).get_array("exports")
+    }
+
+    pub fn add_export(&self, record: Value) {
+        let mut store = lock(&self.exports);
+        let mut all = store.get_array("exports");
+        all.push(record);
+        if all.len() > MAX_EXPORTS {
+            all.drain(0..all.len() - MAX_EXPORTS);
+        }
+        store.set("exports", Value::Array(all));
     }
 
     pub fn get_state(&self) -> Value {
@@ -510,6 +532,7 @@ pub fn migrate_user_data(dest: &Path) {
         "asset-vault-jobs.json",
         "asset-vault-tags.json",
         "asset-vault-meta.json",
+        "asset-vault-exports.json",
     ] {
         let src = old.join(file);
         if src.exists() {

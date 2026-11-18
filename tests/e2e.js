@@ -218,6 +218,61 @@ async function waitForDiag(action, filter, what, ms = 15000) {
   assert.deepStrictEqual(packDiag.importFiles, ['sheet.unitypackage'], 'only the .unitypackage filename is listed');
   console.log(`import files ok: ${packDiag.importFiles.join(', ')}`);
 
+  // A coding agent connects over MCP, exports into a project folder, and the
+  // desktop app must surface both the session and the export.
+  const exportDir = path.join(ROOT, 'project');
+  const mcpInit = await fetch(`${BASE}/mcp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' },
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id: 101,
+      method: 'initialize',
+      params: {
+        protocolVersion: '2025-06-18',
+        clientInfo: { name: 'e2e-agent', version: '1.0.0' },
+        capabilities: {},
+      },
+    }),
+  });
+  assert.strictEqual(mcpInit.status, 200);
+  const sessionId = mcpInit.headers.get('mcp-session-id');
+  assert.ok(sessionId, 'MCP initialize returns a session id');
+
+  const exportCall = await fetch(`${BASE}/mcp`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json, text/event-stream',
+      'Mcp-Session-Id': sessionId,
+    },
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id: 102,
+      method: 'tools/call',
+      params: {
+        name: 'poly_vault_export_asset',
+        arguments: { name: 'Chair', destination: exportDir, subfolder: 'Assets' },
+      },
+    }),
+  });
+  assert.strictEqual(exportCall.status, 200);
+  const exportJson = await exportCall.json();
+  assert.ok(exportJson.result && exportJson.result.structuredContent, 'export returns structured content');
+  assert.strictEqual(exportJson.result.structuredContent.copied, 1, 'one importable file copied');
+  assert.ok(
+    fs.existsSync(path.join(exportDir, 'Assets', 'Chair', 'chair.fbx')),
+    'the mesh was exported into the project folder'
+  );
+
+  const agentDiag = await waitForDiag(
+    'agentspop',
+    (j) => j.agentsOpen && j.agentRows >= 1 && j.exportRows >= 1,
+    'agents panel to list the connected agent and its export'
+  );
+  console.log(`agents ok: rows=${agentDiag.agentRows}, exports=${agentDiag.exportRows}`);
+  await waitForDiag('agentspopoff', (j) => !j.agentsOpen, 'agents panel to close');
+
   // Theme switching + resizable splitters present.
   const themeLight = await waitForDiag(
     'theme:light',

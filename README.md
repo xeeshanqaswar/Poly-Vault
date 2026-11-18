@@ -54,6 +54,9 @@ original files are never modified.
 - **Sends assets to Unity in one click.** With the bundled Unity 6 add-on, an
   import is a single click and the files land in your project, tags attached.
   Your library is only ever read, never moved or modified.
+- **Works with your coding agents.** Claude Code, Codex, Cursor and any other
+  MCP client can search your library and export an asset straight into the
+  project folder they are working in — and the app shows who is connected.
 - **Tells you when Unity is ready.** A small indicator shows when the Editor
   add-on is connected, and each import shows its progress as it happens.
 - **Looks like it belongs on your desktop.** Light, dark and default themes,
@@ -102,6 +105,57 @@ optional and takes about a minute.
 everything else is copied automatically. Your original files are never moved,
 renamed or deleted.
 
+## Letting coding agents use your library
+
+Poly Vault runs a local [MCP](https://modelcontextprotocol.io) server on the same
+loopback bridge as the Unity add-on. Any MCP-capable agent can search the library
+and export an asset into the folder it is working in. Nothing is sent off the
+machine, and the desktop app shows every connected agent and export under
+**Agents** in the toolbar.
+
+Add the server once per tool (Poly Vault must be running):
+
+**Claude Code**
+
+```powershell
+claude mcp add --transport http poly-vault http://127.0.0.1:7100/mcp
+```
+
+**Codex** — `~/.codex/config.toml`
+
+```toml
+[mcp_servers.poly-vault]
+url = "http://127.0.0.1:7100/mcp"
+```
+
+**Cursor** — `~/.cursor/mcp.json`
+
+```json
+{
+  "mcpServers": {
+    "poly-vault": { "url": "http://127.0.0.1:7100/mcp" }
+  }
+}
+```
+
+Any other client that speaks Streamable HTTP works the same way: point it at
+`http://127.0.0.1:7100/mcp`.
+
+| Tool | What it does |
+| --- | --- |
+| `poly_vault_list_libraries` | Lists libraries, paths and asset counts. |
+| `poly_vault_search_assets` | Free-text search with `libraryId`, `kind`, `tag` filters. |
+| `poly_vault_get_asset` | Full detail for one asset: description, tags, importable files, preview. |
+| `poly_vault_export_asset` | Copies an asset into `destination[/subfolder][/<asset>]`. |
+| `poly_vault_list_exports` | Recent exports recorded by Poly Vault. |
+
+The agent must pass an **absolute** `destination` — the project folder it is
+working in. Exports copy the asset's importable files (or its whole folder when
+nothing is marked importable), default to `destination/<asset name>/…`, and
+accept `subfolder`, `flatten` and `overwrite`. Poly Vault refuses destinations
+that are a drive root, a protected system folder, inside one of your libraries,
+or the asset's own folder, so an export can never overwrite the library.
+
 ## Your data stays yours
 
 - Everything is stored in **plain JSON files** in your app data folder
@@ -113,10 +167,13 @@ renamed or deleted.
   new asset, sent from your machine to the store's public page. Nothing else is
   ever requested.
 - The local helper the app uses binds to `127.0.0.1` only — it is not reachable
-  from your network.
+  from your network. The same applies to the MCP endpoint coding agents use.
 
 ## What's new
 
+- **Next** — coding agents (Claude Code, Codex, Cursor and other MCP clients)
+  can search the library and export assets into their project folder; the
+  toolbar **Agents** panel shows who is connected and what they exported.
 - **0.4** — new assets now describe and tag themselves from the Unity Asset
   Store automatically, **Update** re-checks exactly what you have selected
   (asset → folder → library → everything), and the interface got a full visual

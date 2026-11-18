@@ -187,6 +187,7 @@ button, input, select, textarea { font-family: inherit; letter-spacing: inherit;
 
 /* tag filter button + dropdown (search bar filters) */
 .filter-wrap { position: relative; flex: none; }
+.agents-wrap { position: relative; flex: none; }
 .filter-count {
   display: inline-flex;
   min-width: 18px;
@@ -266,6 +267,62 @@ button, input, select, textarea { font-family: inherit; letter-spacing: inherit;
   border-top: 1px solid var(--border);
   border-radius: 0 0 8px 8px;
 }
+
+/* coding-agent (MCP) panel */
+.agents-popover { width: 330px; max-height: 430px; }
+.pop-section-title {
+  padding: 8px 8px 2px;
+  color: var(--text-dim);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.agent-row, .export-row { cursor: default; align-items: flex-start; }
+.agent-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--text-dim);
+}
+.agent-dot.on { background: #37d67a; box-shadow: 0 0 0 3px rgba(55, 214, 122, 0.18); }
+.agent-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.agent-name-line { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.agent-name { font-size: 12.5px; font-weight: 600; }
+.agent-ver { color: var(--text-dim); font-size: 10.5px; }
+.agent-meta, .export-meta { color: var(--text-dim); font-size: 11px; }
+.export-name { font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.export-badge {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--bg-hover);
+  color: var(--text-dim);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.export-badge.ok { background: var(--accent-soft); color: var(--accent); }
+.export-dest {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: left;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+.mcp-hint {
+  margin-top: 6px;
+  color: var(--text-dim);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10.5px;
+  line-height: 1.5;
+  word-break: break-all;
+}
+.toolbar-btn.has-agents { border-color: var(--accent); }
 .hidden { display: none !important; }
 
 /* ---------------- buttons (shared pill base) ---------------- */

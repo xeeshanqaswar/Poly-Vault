@@ -172,10 +172,15 @@ assert.deepStrictEqual(pruned.map((j) => j.id), ['2', '3', '4', '5'], 'retains n
     jobs: jobsStore.get('jobs'),
   };
   const port = 7411;
+  const agentExports = [];
   const bridge = startBridge({
     host: '127.0.0.1',
     port,
     getState: () => store,
+    agentExports: {
+      getAll: () => agentExports,
+      add: (record) => { agentExports.push(record); },
+    },
     tags: {
       getAll: tagMap,
       set: (p, list) => {
@@ -433,7 +438,79 @@ assert.deepStrictEqual(pruned.map((j) => j.id), ['2', '3', '4', '5'], 'retains n
   assert.strictEqual(activeReimport.jobs.length, 1);
   assert.strictEqual(activeReimport.jobs[0].id, reimportJob.id);
 
-  console.log('bridge ok: preview, auth guard, tags + meta round-trip, job queue');
+  // ---- coding agents over MCP ----
+  const mcp = async (payload) => {
+    const res = await fetch(`${base}/mcp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' },
+      body: JSON.stringify(payload),
+    });
+    return { res, json: await res.json() };
+  };
+
+  const init = await mcp({
+    jsonrpc: '2.0',
+    id: 1,
+    method: 'initialize',
+    params: {
+      protocolVersion: '2025-06-18',
+      clientInfo: { name: 'smoke-agent', version: '1.0.0' },
+      capabilities: {},
+    },
+  });
+  assert.strictEqual(init.res.status, 200);
+  assert.ok(init.res.headers.get('mcp-session-id'), 'MCP session id header');
+  assert.strictEqual(init.json.result.serverInfo.name, 'poly-vault');
+
+  const toolsRes = await mcp({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
+  const toolNames = toolsRes.json.result.tools.map((t) => t.name);
+  for (const name of [
+    'poly_vault_list_libraries',
+    'poly_vault_search_assets',
+    'poly_vault_get_asset',
+    'poly_vault_export_asset',
+    'poly_vault_list_exports',
+  ]) {
+    assert.ok(toolNames.includes(name), `MCP tool ${name}`);
+  }
+
+  const callTool = async (id, name, args) => {
+    const out = await mcp({ jsonrpc: '2.0', id, method: 'tools/call', params: { name, arguments: args } });
+    const result = out.json.result;
+    let payload = result.structuredContent;
+    if (!payload) {
+      const text = result.content && result.content[0] ? result.content[0].text : '';
+      try {
+        payload = JSON.parse(text);
+      } catch (_) {
+        payload = { error: text };
+      }
+    }
+    return { result, payload };
+  };
+
+  const search = await callTool(3, 'poly_vault_search_assets', { query: 'chair' });
+  assert.strictEqual(search.payload.total, 1);
+  assert.strictEqual(search.payload.returned[0].name, 'Chair');
+
+  const exportDir = fs.mkdtempSync(path.join(os.tmpdir(), 'assetvault-export-'));
+  const exported = await callTool(4, 'poly_vault_export_asset', { name: 'Chair', destination: exportDir });
+  assert.strictEqual(exported.result.isError, undefined);
+  assert.strictEqual(exported.payload.copied, 1, 'only importable files are exported');
+  assert.ok(fs.existsSync(path.join(exportDir, 'Chair', 'chair.fbx')), 'mesh copied into the project');
+
+  const blocked = await callTool(5, 'poly_vault_export_asset', { name: 'Chair', destination: LIB_ROOT });
+  assert.strictEqual(blocked.result.isError, true, 'export into a library is refused');
+
+  const agents = await (await fetch(`${base}/api/agents`)).json();
+  assert.strictEqual(agents.agents.length, 1);
+  assert.strictEqual(agents.agents[0].name, 'smoke-agent');
+  assert.strictEqual(agents.agents[0].connected, true);
+  assert.strictEqual(agents.exports.length, 1);
+  assert.strictEqual(agents.exports[0].assetName, 'Chair');
+  assert.ok(agents.mcp.url.endsWith('/mcp'));
+
+  console.log('bridge ok: preview, auth guard, tags + meta round-trip, job queue, MCP agent export');
   bridge.server.close();
 
   // ---- enrichment wired through the bridge (real engine, fake lookup) ----

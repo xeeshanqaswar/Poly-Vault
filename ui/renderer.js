@@ -19,6 +19,7 @@ const state = {
   online: false,
   unityUp: false,
   theme: null,
+  agentData: { agents: [], exports: [], mcp: null },
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -46,6 +47,7 @@ const ICONS = {
   pencil: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>',
   check: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
   tag: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/></svg>',
+  plug: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></svg>',
 };
 
 function iconSpan(name, cls) {
@@ -225,14 +227,129 @@ async function pollUnityStatus() {
   } catch (_) { /* bridge offline; status indicators unchanged */ }
 }
 
+// ---------- coding agents (MCP) ----------
+
+function timeAgo(value) {
+  const t = typeof value === 'number' ? value : Date.parse(value);
+  if (!Number.isFinite(t)) return '';
+  const secs = Math.max(0, Math.round((Date.now() - t) / 1000));
+  if (secs < 5) return 'just now';
+  if (secs < 60) return `${secs}s ago`;
+  const mins = Math.round(secs / 60);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.round(hours / 24)}d ago`;
+}
+
+async function pollAgents() {
+  if (!state.serverUrl) return;
+  try {
+    const res = await fetch(`${state.serverUrl}/api/agents`);
+    const json = await res.json();
+    if (!json.ok) return;
+    state.agentData = json;
+    renderAgentsBadge();
+    const pop = $('#agents-popover');
+    if (pop && !pop.classList.contains('hidden')) renderAgentsPopover();
+  } catch (_) { /* bridge offline; panel keeps its last contents */ }
+}
+
+function renderAgentsBadge() {
+  const connected = (state.agentData.agents || []).filter((a) => a.connected).length;
+  const count = $('#agents-count');
+  if (count) count.textContent = connected ? String(connected) : '';
+  const btn = $('#btn-agents');
+  if (btn) btn.classList.toggle('has-agents', connected > 0);
+}
+
+function renderAgentsPopover() {
+  const pop = $('#agents-popover');
+  if (!pop || pop.classList.contains('hidden')) return;
+  pop.innerHTML = '';
+
+  const agents = state.agentData.agents || [];
+  const exports = state.agentData.exports || [];
+  const mcp = state.agentData.mcp || {};
+  const section = (title) => pop.appendChild(el('div', 'pop-section-title', title));
+
+  section('Coding agents');
+  if (!agents.length) {
+    const empty = el('div', 'popover-empty');
+    empty.appendChild(el('div', null, 'No agent connected yet. Point an MCP client at:'));
+    empty.appendChild(el('div', 'mcp-hint', mcp.url || 'http://127.0.0.1:7100/mcp'));
+    empty.appendChild(el('div', 'mcp-hint', `claude mcp add --transport http poly-vault ${mcp.url || 'http://127.0.0.1:7100/mcp'}`));
+    pop.appendChild(empty);
+  } else {
+    for (const agent of agents) {
+      const row = el('div', 'pop-row agent-row');
+      row.appendChild(el('span', 'agent-dot' + (agent.connected ? ' on' : '')));
+      const main = el('div', 'agent-main');
+      const line = el('div', 'agent-name-line');
+      line.appendChild(el('span', 'agent-name', agent.name || 'Unknown agent'));
+      if (agent.version) line.appendChild(el('span', 'agent-ver', `v${agent.version}`));
+      main.appendChild(line);
+      const calls = `${agent.calls} call${agent.calls === 1 ? '' : 's'}`;
+      const stateText = agent.connected ? 'connected' : `idle ${timeAgo(agent.lastSeenAt)}`;
+      main.appendChild(el('div', 'agent-meta', `${calls} \u00b7 ${stateText}`));
+      row.appendChild(main);
+      pop.appendChild(row);
+    }
+  }
+
+  section('Recent exports');
+  if (!exports.length) {
+    pop.appendChild(el('div', 'popover-empty', 'No agent exports yet \u2014 ask an agent to export an asset.'));
+  } else {
+    for (const exp of exports) {
+      const row = el('div', 'pop-row export-row');
+      const main = el('div', 'agent-main');
+      const line = el('div', 'agent-name-line');
+      line.appendChild(el('span', 'export-name', exp.assetName || 'asset'));
+      line.appendChild(el('span', 'export-badge' + (exp.status === 'done' ? ' ok' : ''), exp.status || 'done'));
+      main.appendChild(line);
+      main.appendChild(el('div', 'export-dest', exp.destination || ''));
+      const files = exp.copied || 0;
+      const skipped = exp.skipped ? `, ${exp.skipped} skipped` : '';
+      const who = exp.agent && exp.agent.name ? ` \u00b7 ${exp.agent.name}` : '';
+      main.appendChild(el('div', 'export-meta', `${files} file${files === 1 ? '' : 's'}${skipped} \u00b7 ${timeAgo(exp.createdAt)}${who}`));
+      row.appendChild(main);
+      pop.appendChild(row);
+    }
+  }
+}
+
+function initAgentsPopover() {
+  const btn = $('#btn-agents');
+  const pop = $('#agents-popover');
+  if (!btn || !pop) return;
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const willOpen = pop.classList.contains('hidden');
+    pop.classList.toggle('hidden', !willOpen);
+    if (willOpen) {
+      const tagPop = $('#tag-popover');
+      if (tagPop) tagPop.classList.add('hidden');
+      renderAgentsPopover();
+    }
+  });
+  pop.addEventListener('click', (e) => e.stopPropagation());
+  document.addEventListener('click', (e) => {
+    if (e.target !== btn && !pop.contains(e.target)) pop.classList.add('hidden');
+  });
+}
+
 async function schedule() {
   await refreshLibrary();
   await pollJobs();
   await pollUnityStatus();
+  await pollAgents();
   renderUnityState();
+  renderAgentsBadge();
   setInterval(pollJobs, 5000);
   setInterval(refreshLibrary, 20000);
   setInterval(pollUnityStatus, 5000);
+  setInterval(pollAgents, 5000);
 }
 
 async function loadPeripherals() {
@@ -1516,6 +1633,7 @@ function bindUi() {
     if (b && typeof b.insertBefore === 'function') b.insertBefore(iconSpan(name, 'btn-icon'), b.firstChild);
   };
   withIcon('btn-tag-filter', 'tag');
+  withIcon('btn-agents', 'plug');
   withIcon('btn-update', 'refresh');
   withIcon('btn-add-library', 'plus');
   withIcon('btn-collapse-all', 'chevronsUp');
@@ -1605,6 +1723,11 @@ function bindUi() {
         pop.classList.add('hidden');
         return;
       }
+      const agentsPop = $('#agents-popover');
+      if (agentsPop && !agentsPop.classList.contains('hidden')) {
+        agentsPop.classList.add('hidden');
+        return;
+      }
       if (document.activeElement === searchInput) {
         if (state.search) {
           state.search = '';
@@ -1619,6 +1742,7 @@ function bindUi() {
   });
 
   initTagPopover();
+  initAgentsPopover();
   makeResizer($('#split-left'), $('#sidebar'), { min: 200, max: 520, saveKey: 'av.layout.sidebar' });
   makeResizer($('#split-right'), $('#detail'), { invert: true, min: 300, max: 620, saveKey: 'av.layout.detail' });
 }

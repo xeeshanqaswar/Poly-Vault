@@ -6,6 +6,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const { scanLibrary } = require('./library');
+const { createAgentHub } = require('./agentHub');
 
 const ALLOWED_PREVIEW_EXT = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif']);
 const PREVIEW_CACHE_CONTROL = 'private, max-age=3600';
@@ -135,14 +136,42 @@ function sanitizeScope(raw) {
  * meta      => { getAll(): { [absPath]: { description: string } }, set(absPath, description): string }
  * enrichment=> { request([{path,name}]): number, status(): {state,pending,active,done,message} }
  * update    => { run(scope): Promise<{libraries, targets:[{path,name}]}> }
+ * agentExports => { getAll(): Export[], add(record): void }  (agent export log)
  * onJobsChanged(jobs) => called whenever the job queue is mutated (cheap to persist).
  */
-function startBridge({ host = '127.0.0.1', port = 7100, getState, tags, meta, onJobsChanged, onDiag, enrichment, update }) {
+function startBridge({ host = '127.0.0.1', port = 7100, getState, tags, meta, onJobsChanged, onDiag, enrichment, update, agentExports }) {
   let lastUnitySeen = 0; // epoch ms of the last /api/unity/* request (Unity plugin poll)
+
+  // Full rescan used by /api/library and by the agent tools. Tags/meta are read
+  // once per call so an export always reflects the current library state.
+  const scanAll = () => {
+    const libs = getState().libraries || [];
+    const tagMap = tags && tags.getAll ? tags.getAll() : {};
+    const metaMap = meta && meta.getAll ? meta.getAll() : {};
+    const getTagsFor = (absPath) => {
+      const list = tagMap[path.resolve(absPath)];
+      return Array.isArray(list) ? list : [];
+    };
+    const getMetaFor = (absPath) => {
+      const entry = metaMap[path.resolve(absPath)];
+      return entry && entry.description ? entry.description : '';
+    };
+    return libs.map((lib) => scanLibrary(lib, { getTags: getTagsFor, getMeta: getMetaFor }));
+  };
+
+  const hub = createAgentHub({
+    scanAll,
+    getLibraries: () => getState().libraries || [],
+    getVersion: () => getState().version || '',
+    mcpUrl: `http://${host}:${port}/mcp`,
+    exports: agentExports || { getAll: () => [], add: () => {} },
+  });
+
   const server = http.createServer(async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept, Mcp-Session-Id, Mcp-Protocol-Version');
+    res.setHeader('Access-Control-Expose-Headers', 'Mcp-Session-Id');
 
     if (req.method === 'OPTIONS') {
       res.writeHead(204);
@@ -171,19 +200,7 @@ function startBridge({ host = '127.0.0.1', port = 7100, getState, tags, meta, on
       }
 
       if (req.method === 'GET' && route === '/api/library') {
-        const tagMap = tags && tags.getAll ? tags.getAll() : {};
-        const metaMap = meta && meta.getAll ? meta.getAll() : {};
-        const getTagsFor = (absPath) => {
-          const key = path.resolve(absPath);
-          const list = tagMap[key];
-          return Array.isArray(list) ? list : [];
-        };
-        const getMetaFor = (absPath) => {
-          const key = path.resolve(absPath);
-          const entry = metaMap[key];
-          return entry && entry.description ? entry.description : '';
-        };
-        const rescanned = libs.map((lib) => scanLibrary(lib, { getTags: getTagsFor, getMeta: getMetaFor }));
+        const rescanned = scanAll();
         if (enrichment && enrichment.request) {
           const fresh = [];
           for (const lib of rescanned) {
@@ -196,6 +213,44 @@ function startBridge({ host = '127.0.0.1', port = 7100, getState, tags, meta, on
           libraries: rescanned,
           serverTime: new Date().toISOString(),
         });
+        return;
+      }
+
+      if (req.method === 'GET' && route === '/api/agents') {
+        sendJson(res, 200, {
+          ok: true,
+          ...hub.snapshot(),
+          serverTime: new Date().toISOString(),
+        });
+        return;
+      }
+
+      if (route === '/mcp') {
+        if (req.method === 'GET') {
+          res.writeHead(405, { Allow: 'POST, DELETE', 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({ ok: false, error: 'MCP stream is POST-only' }));
+          return;
+        }
+        if (req.method === 'DELETE') {
+          hub.closeSession(req.headers['mcp-session-id']);
+          res.writeHead(200);
+          res.end();
+          return;
+        }
+        if (req.method !== 'POST') {
+          res.writeHead(405, { Allow: 'POST, DELETE' });
+          res.end();
+          return;
+        }
+        const body = await readBody(req);
+        const result = await hub.handleRpc(body, req.headers['mcp-session-id']);
+        if (result.sessionId) res.setHeader('Mcp-Session-Id', result.sessionId);
+        if (!result.payload) {
+          res.writeHead(202);
+          res.end();
+          return;
+        }
+        sendJson(res, 200, result.payload);
         return;
       }
 

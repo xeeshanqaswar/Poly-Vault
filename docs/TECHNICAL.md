@@ -59,7 +59,8 @@ Contents:
 ```
 src/main/store.js          JSON-backed persistence (no Electron deps)
 src/main/library.js        scanner: asset/folder detection, aggregation
-src/main/bridgeServer.js   HTTP bridge + job queue (exported pure for tests)
+src/main/bridgeServer.js   HTTP bridge + job queue + MCP route (exported pure for tests)
+src/main/agentHub.js       MCP JSON-RPC tools, guarded agent exports, session tracking
 src/main/enrichment.js     throttled description/tag queue + meta merge rules
 src/main/autoTags.js       curated keyword/category → tag rules
 src/main/index.js          Electron main, IPC, dialogs, migration, enrichment wiring
@@ -238,6 +239,9 @@ every visible thumbnail.
 | POST | `/api/unity/import-jobs/{id}/complete` | Complete a job (`{ note }`) |
 | POST | `/api/unity/import-jobs/{id}/failed` | Fail a job (`{ note }`) |
 | GET | `/api/preview?path=…` | Preview image stream (whitelisted extensions + library roots only) |
+| GET | `/api/agents` | Agent sessions + recent exports + MCP URL |
+| POST | `/mcp` | MCP Streamable HTTP for coding agents |
+| DELETE | `/mcp` | Close an agent session |
 | GET | `/__diag?action=…` | Test automation probe (below) |
 
 **Update scopes** (`POST /api/update`): `{ type: 'asset' | 'container', libId, rel }`
@@ -258,8 +262,43 @@ records whose earlier lookup found nothing are retried.
   403 if the folder is outside a library.
 - `GET /api/preview`: 400 unsupported extension; 403 outside a library;
   404 missing file; 304 when a conditional header matches the current file.
+- `POST /mcp`: 400 malformed JSON; unknown tools answer `isError`; export
+  destinations are validated (below).
 - Bodies are capped at 2 MB (`readBody`).
 - Port/host are configurable via `asset-vault-settings.json` → `server`.
+
+### MCP agent endpoint
+
+`src/main/agentHub.js` implements the MCP server used by coding agents. It is
+created inside `startBridge()` with the same fresh-scan helper as
+`/api/library` (`scanAll()`), so tools always see current tags/descriptions.
+
+- `POST /mcp` parses JSON-RPC (single object or batch) and replies
+  `application/json`. Notifications return `202` with no body. The first
+  `initialize` sets `Mcp-Session-Id`; `DELETE /mcp` drops the session.
+- Supported methods: `initialize`, `ping`, `tools/list`, `tools/call`,
+  `resources/list`, `prompts/list`, `notifications/*`. Unknown methods get
+  `-32601`; malformed requests `-32600`.
+- Tools: `poly_vault_list_libraries`, `poly_vault_search_assets`,
+  `poly_vault_get_asset`, `poly_vault_export_asset`, `poly_vault_list_exports`
+  (schemas in `TOOLS`). Tool payloads are returned as pretty JSON text plus
+  `structuredContent`.
+- Non-`initialize` calls without `Mcp-Session-Id` are attributed to the most
+  recently active session, so clients that skip the header don't create
+  duplicate rows in the Agents panel.
+- Sessions are in-memory (name/version from `clientInfo`, call counts per tool,
+  last seen). They report `connected` for 10 minutes after the last call and
+  the panel lists the newest 20.
+- Exports copy existing importable files, or walk the asset folder when nothing
+  is importable. Layout is `destination[/subfolder]/<asset name>/<rel>` unless
+  `flatten`. Existing targets are skipped unless `overwrite`. Limits: 2000
+  files, 2 GB, first 200 paths recorded per list.
+- `assertDestination()` refuses filesystem roots, `WINDIR`/`SystemRoot`/
+  `ProgramFiles`/`ProgramFiles(x86)`, any registered library, and the asset's
+  own folder; `sanitizeSubfolder()` rejects absolute paths and `..`.
+- Each export is appended to `asset-vault-exports.json` through the
+  `agentExports` adapter wired in `index.js` (capped at 200). The renderer
+  polls `GET /api/agents` every 5 s to paint the **Agents** badge and popover.
 
 ### Job model
 
@@ -282,12 +321,15 @@ Executes JavaScript inside the renderer and returns UI metrics. Actions:
 | `selectFirstCard` | Clicks the first asset card |
 | `update` (alias `rescan`) | Clicks the Update button |
 | `theme:<name>` | Applies a theme via the toolbar select |
+| `tagpop` / `tagpopoff` | Opens/closes the tag filter popover |
+| `agentspop` / `agentspopoff` | Opens/closes the Agents popover |
 
 Response metrics include `libs`, `treeRows`, `cards`, `dot`,
 `detail` (detail h2), `view` (dataset.view), `metaRows`, `descEditors`,
 `tagInputs`, `cascadeToggles`, `tagSuggestions`, `contTagChips`, `updateBtn`,
 `updateStatus`, `updateStatusShown`, `importHeading`, `importFiles`,
-`fileRows`, `openPathBtns`, `pathTexts`, `theme`, `splitters`, `sbW`, `trw`
+`fileRows`, `openPathBtns`, `pathTexts`, `agentsBtn`, `agentsCount`, `agentRows`,
+`exportRows`, `agentsOpen`, `theme`, `splitters`, `sbW`, `trw`
 (first tree-row paddings).
 
 ---
@@ -322,6 +364,7 @@ libsMeta         // registered library records
 libraries        // full scans from /api/library
 tagData, metaData
 jobsByAsset      // Map<assetId, job>
+agentData        // { agents, exports, mcp } from /api/agents
 activeLibId, activeNode ({libId, rel} folder filter)
   expanded         // Set of `libId::rel` expand keys
 selectedAssetId, detail ({kind: asset|container|library, …})
@@ -470,10 +513,11 @@ Stores are plain JSON via `src/main/store.js` in `app.getPath('userData')`
 | `asset-vault-tags.json` | `{ tags: { [absPath]: string[] } }` |
 | `asset-vault-meta.json` | `{ meta: { [absPath]: { description, name, url, found, fetchedAt } } }` |
 | `asset-vault-jobs.json` | `{ jobs: Job[] }` |
+| `asset-vault-exports.json` | `{ exports: ExportRecord[] }` (newest last, capped at 200) |
 
 **Migration:** pre-0.3 builds used the product name "Asset Vault", so their
 userData folder is `…/Asset Vault`. On first launch under the new name,
-`migrateUserData()` copies the four JSON files from the old folder to the new
+`migrateUserData()` copies the JSON files from the old folder to the new
 `…/Poly Vault` folder when the latter does not exist yet (skipped entirely when
 `ASSETVAULT_USER_DATA` is set, i.e. tests).
 
@@ -495,6 +539,10 @@ userData folder is `…/Asset Vault`. On first launch under the new name,
   the main process against the store's public product page — no credentials, no
   user data attached, at most 3 concurrent lookups spaced 150 ms apart, each
   bounded by a 20 s timeout.
+- `/mcp` inherits loopback-only reach and has no credentials: any local process
+  could already read the same files. It is read-only against libraries and the
+  export path is guarded (no roots, protected folders, libraries or asset
+  folders), so an agent cannot clobber a library through it.
 
 ---
 
@@ -556,7 +604,8 @@ on your oldest supported distro or rely on `APPIMAGE_EXTRACT_AND_RUN=1`.
   auto-fetch, derived tags, dedupe, lookup failures, `force` retry, and that a
   miss never wipes a manual description), and boots the bridge twice with temp
   stores (preview auth guard, tags + meta round-trips, 403 for outside-library
-  paths, job queue transitions, plus an end-to-end check that `GET /api/library`
+  paths, job queue transitions, the MCP initialize/tools/export flow and its
+  guards, plus an end-to-end check that `GET /api/library`
   enriches new assets and `POST /api/update` re-checks only the misses).
 - `node tests/e2e.js` — spawns the real Electron main with
   `ASSETVAULT_USER_DATA` + `ASSETVAULT_BOOT_LIBRARY` + `ASSETVAULT_NO_ENRICH=1`
@@ -564,11 +613,14 @@ on your oldest supported distro or rely on `APPIMAGE_EXTRACT_AND_RUN=1`.
   HTTP `__diag` actions, and asserts rendered state: library registered,
   tree rows/cards present, container detail (meta rows, descendant tag chips,
   cascade toggle, no path text), asset detail (description editor, tag input),
-  the **Import files** list, theme switching, and the two
+  the **Import files** list, an MCP agent export into the fixture project folder
+  reflected in the **Agents** popover, theme switching, and the two
   splitters. Polls are handled by `waitForDiag(action, predicate, what)`, which
   repeats actions until a timeout while the renderer's 5 s job-poll runs.
   (`selectRel:<name>`, `selectFirstCard`, `selectCard:<name>`, `selectLib`,
-  `update`, `theme:<name>`, `tag:<name>` are the available actions.)
+  `update`, `theme:<name>`, `tag:<name>`, `agentspop` are the available actions.)
+- `cargo test --manifest-path src-tauri/Cargo.toml` — the Rust port's unit and
+  HTTP tests, including the same MCP export/session assertions.
 
 Both tests must pass before a release; they are the final verification step of
 the packaging pipeline documented in the [README](../README.md).

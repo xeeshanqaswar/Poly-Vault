@@ -17,6 +17,7 @@ use tower_http::cors::CorsLayer;
 
 use crate::enrichment::EnrichItem;
 use crate::library::LibraryScan;
+use crate::mcp;
 use crate::state::{create_job, prune_jobs, unity_seen_now, AppState, APP_NAME};
 use crate::time::now_iso;
 
@@ -51,6 +52,11 @@ pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/api/status", get(status))
         .route("/api/library", get(library))
+        .route("/api/agents", get(agents))
+        .route(
+            "/mcp",
+            get(mcp_get).post(mcp_post).delete(mcp_delete),
+        )
         .route("/api/enrichment", get(enrichment))
         .route("/api/update", post(update))
         .route("/api/meta", get(meta_list).put(meta_set))
@@ -518,6 +524,76 @@ async fn unity_job_status(
     json_res(StatusCode::OK, json!({ "ok": true, "job": updated }))
 }
 
+async fn agents(State(state): State<Arc<AppState>>) -> Response {
+    let mut payload = mcp::snapshot(&state);
+    if let Some(obj) = payload.as_object_mut() {
+        obj.insert("ok".into(), json!(true));
+        obj.insert("serverTime".into(), json!(now_iso()));
+    }
+    json_res(StatusCode::OK, payload)
+}
+
+fn with_session(response: Response, session: Option<String>) -> Response {
+    if let Some(id) = session {
+        if let Ok(value) = axum::http::HeaderValue::from_str(&id) {
+            let mut response = response;
+            response.headers_mut().insert("mcp-session-id", value);
+            return response;
+        }
+    }
+    response
+}
+
+async fn mcp_post(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    let session = headers
+        .get("mcp-session-id")
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_string);
+
+    let Ok(parsed) = serde_json::from_slice::<Value>(&body) else {
+        return json_res(
+            StatusCode::BAD_REQUEST,
+            json!({ "jsonrpc": "2.0", "id": null, "error": { "code": -32700, "message": "parse error" } }),
+        );
+    };
+
+    let call_state = Arc::clone(&state);
+    let (payload, session_id) = tokio::task::spawn_blocking(move || {
+        mcp::handle_rpc(&call_state, &parsed, session.as_deref())
+    })
+    .await
+    .unwrap_or((None, None));
+
+    match payload {
+        Some(value) => with_session(json_res(StatusCode::OK, value), session_id),
+        None => with_session(StatusCode::ACCEPTED.into_response(), session_id),
+    }
+}
+
+async fn mcp_delete(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
+    let session = headers
+        .get("mcp-session-id")
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_string);
+    mcp::close_session(&state, session.as_deref());
+    StatusCode::OK.into_response()
+}
+
+async fn mcp_get() -> Response {
+    Response::builder()
+        .status(StatusCode::METHOD_NOT_ALLOWED)
+        .header(header::ALLOW, "POST, DELETE")
+        .header(header::CONTENT_TYPE, "application/json; charset=utf-8")
+        .body(Body::from(
+            json!({ "ok": false, "error": "MCP stream is POST-only" }).to_string(),
+        ))
+        .unwrap_or_else(|_| error_res(StatusCode::INTERNAL_SERVER_ERROR, "response error"))
+}
+
 async fn diag() -> Response {
     json_res(
         StatusCode::OK,
@@ -620,6 +696,125 @@ mod tests {
             let _ = axum::serve(listener, router(state)).await;
         });
         format!("http://{address}")
+    }
+
+    #[tokio::test]
+    async fn serves_mcp_agents_and_exports() {
+        std::env::set_var("ASSETVAULT_NO_ENRICH", "1");
+        let (dir, state) = library_fixture();
+        let base = spawn(Arc::clone(&state)).await;
+        let client = reqwest::Client::new();
+
+        let init = client
+            .post(format!("{base}/mcp"))
+            .json(&json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2025-06-18",
+                    "clientInfo": { "name": "http-agent", "version": "1.0.0" },
+                    "capabilities": {}
+                }
+            }))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(init.status(), 200);
+        let session = init
+            .headers()
+            .get("mcp-session-id")
+            .expect("mcp session header")
+            .to_str()
+            .unwrap()
+            .to_string();
+        let init_json: Value = init.json().await.unwrap();
+        assert_eq!(init_json["result"]["serverInfo"]["name"], "poly-vault");
+
+        let tools: Value = client
+            .post(format!("{base}/mcp"))
+            .header("Mcp-Session-Id", &session)
+            .json(&json!({ "jsonrpc": "2.0", "id": 2, "method": "tools/list" }))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        assert_eq!(tools["result"]["tools"].as_array().unwrap().len(), 5);
+
+        let project = dir.path().join("project");
+        let export: Value = client
+            .post(format!("{base}/mcp"))
+            .header("Mcp-Session-Id", &session)
+            .json(&json!({
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "tools/call",
+                "params": {
+                    "name": "poly_vault_export_asset",
+                    "arguments": {
+                        "name": "Chair",
+                        "destination": project.to_string_lossy(),
+                        "subfolder": "Assets"
+                    }
+                }
+            }))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        assert_eq!(export["result"]["structuredContent"]["copied"], 1);
+        assert!(project.join("Assets/Chair/chair.fbx").is_file());
+
+        let blocked: Value = client
+            .post(format!("{base}/mcp"))
+            .header("Mcp-Session-Id", &session)
+            .json(&json!({
+                "jsonrpc": "2.0",
+                "id": 4,
+                "method": "tools/call",
+                "params": {
+                    "name": "poly_vault_export_asset",
+                    "arguments": {
+                        "name": "Chair",
+                        "destination": dir.path().join("Lib").to_string_lossy()
+                    }
+                }
+            }))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        assert_eq!(blocked["result"]["isError"], true);
+
+        let agents: Value = client
+            .get(format!("{base}/api/agents"))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        assert_eq!(agents["ok"], true);
+        assert_eq!(agents["agents"][0]["name"], "http-agent");
+        assert_eq!(agents["agents"][0]["connected"], true);
+        assert_eq!(agents["exports"][0]["assetName"], "Chair");
+        assert!(agents["mcp"]["url"]
+            .as_str()
+            .unwrap()
+            .ends_with("/mcp"));
+
+        let get_mcp = client
+            .get(format!("{base}/mcp"))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(get_mcp.status(), 405);
     }
 
     #[tokio::test]

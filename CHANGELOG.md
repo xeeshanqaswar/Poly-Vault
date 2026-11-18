@@ -6,6 +6,30 @@ All notable changes to **Poly Vault** are documented here. Format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Coding-agent access over MCP** — Poly Vault now serves a local
+  [MCP](https://modelcontextprotocol.io) Streamable HTTP endpoint at
+  `POST /mcp` on the existing `127.0.0.1:7100` bridge, so Claude Code, Codex,
+  Cursor and any other MCP client can browse the library and export assets
+  straight into the project folder they are working in. Tools:
+  `poly_vault_list_libraries`, `poly_vault_search_assets`,
+  `poly_vault_get_asset`, `poly_vault_export_asset`, `poly_vault_list_exports`.
+- **Agents panel** — a toolbar **Agents** button with a connected-count badge
+  and a popover listing connected sessions (name, version, calls, last seen)
+  and recent exports, polled from `GET /api/agents` every 5 s.
+- **Export log** — every agent export is recorded in
+  `asset-vault-exports.json` (capped at 200) with asset, destination, file
+  counts, bytes and the requesting agent.
+- **Guarded exports** — destinations are absolute project folders only; drive
+  roots, protected system folders, registered libraries and the asset's own
+  folder are refused. Exports copy importable files (falling back to the whole
+  asset folder), support `subfolder`, `flatten` and `overwrite`, and cap at
+  2000 files / 2 GB.
+- **Rust port parity** — the experimental Tauri build implements the same MCP
+  tools, guards, session tracking and `/api/agents` route, covered by unit and
+  HTTP tests.
+
 ## [0.4.2] — 2026-11-07
 
 Performance optimizations and UI usability enhancements across the Electron renderer, library scanner, and bridge server.
