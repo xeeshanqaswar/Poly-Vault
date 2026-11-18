@@ -154,6 +154,8 @@ only thing worth a question).
 ## Windows packaging notes
 
 - Icons come from `branding/` via `npm run icons` (`build/icon.ico|png|icns`, `ui/assets/*`).
+- Packaging scripts clean `dist/` first (`tools/clean-dist.js`), so old installers,
+  blockmaps and `dist/win-unpacked` never survive a new build.
 - Linux `deb` artifact is `PolyVault-<ver>-amd64.deb` (Debian amd64 naming), AppImage is
   `PolyVault-<ver>-x86_64.AppImage`.
 - Electron-builder **must not publish** — builds pass `--publish never`; releases are assembled

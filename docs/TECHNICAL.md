@@ -566,6 +566,11 @@ deps, draws the gradient-diamond mark):
 | Linux | `AppImage` + `deb` (x64) | `dist/PolyVault-<ver>-x86_64.AppImage`, `PolyVault-<ver>-amd64.deb` |
 | macOS | `dmg` + `zip` (x64 + arm64) | `dist/PolyVault-<ver>-{x64,arm64}.{dmg,zip}` |
 
+Every packaging script (`pack`, `dist`, `dist:win`, `dist:linux`, `dist:mac`)
+runs `npm run clean:dist` first, which deletes the whole `dist/` folder via
+`tools/clean-dist.js`. Old installers, blockmaps, AppImages and the previous
+`dist/win-unpacked` tree are removed so a build can never ship a stale file.
+
 **Signing:**
 
 - Windows `exe` is unsigned by default (SmartScreen prompt). Signing: set

@@ -25,11 +25,12 @@
     "smoke": "node tests/smoke.js",
     "e2e": "node tests/e2e.js",
     "icons": "node tools/gen-icon.js && node tools/gen-fonts.js",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder --win",
-    "dist:win": "electron-builder --win",
-    "dist:linux": "electron-builder --linux",
-    "dist:mac": "electron-builder --mac"
+    "clean:dist": "node tools/clean-dist.js dist",
+    "pack": "npm run clean:dist && electron-builder --dir",
+    "dist": "npm run clean:dist && electron-builder --win",
+    "dist:win": "npm run clean:dist && electron-builder --win",
+    "dist:linux": "npm run clean:dist && electron-builder --linux",
+    "dist:mac": "npm run clean:dist && electron-builder --mac"
   },
   "devDependencies": {
     "@fontsource/inter": "^5.3.0",
