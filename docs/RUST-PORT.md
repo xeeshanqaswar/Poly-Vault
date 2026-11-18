@@ -126,16 +126,31 @@ node tests/smoke.js  SMOKE PASS
 node tests/e2e.js    E2E PASS
 ```
 
-Manual run of `src-tauri\target\debug\poly-vault.exe` with
-`ASSETVAULT_USER_DATA`, `ASSETVAULT_BOOT_LIBRARY` and `ASSETVAULT_NO_ENRICH=1`:
-bound `127.0.0.1:7100`, `/api/status` reported the registered library and a
-non-zero `unitySeenAt` (the webview had loaded `ui/` and was polling), and
+Manual runs of `src-tauri\target\debug\poly-vault.exe` and the release build
+(`cargo build --release`) with `ASSETVAULT_USER_DATA`,
+`ASSETVAULT_BOOT_LIBRARY` and `ASSETVAULT_NO_ENRICH=1`: both bound
+`127.0.0.1:7100`, `/api/status` reported the registered library, and
 `/api/library` returned the fixture scan with preview, kinds and timestamps.
+The release run also spawned its WebView2 processes, so `ui/index.html` loaded
+inside the Rust shell. `unitySeenAt` stays `0` without the Unity plugin: only
+the C# plugin polls `/api/unity/import-jobs`, the renderer polls `/api/status`.
 
 `tests/e2e.js` also carried a pre-existing race: it asserted the
 "Re-import to Unity" label immediately after selecting the card, while the
 renderer only refreshes job state on a 5 s poll, so the suite failed on `main`
 (`d3b4f84`) too. The wait now includes the completed-job button state.
+
+### Build output (Windows x64)
+
+```powershell
+cargo build --release                        # src-tauri\target\release\poly-vault.exe            (~16 MB)
+npx @tauri-apps/cli@2 build --bundles nsis   # src-tauri\target\release\bundle\nsis\
+                                             #   Poly Vault_0.4.2_x64-setup.exe                  (~4.5 MB)
+```
+
+Both are unsigned, and the Tauri build is not wired into CI yet. The CLI warns
+that the identifier `com.polyvault.app` ends in `.app`, which conflicts with the
+macOS bundle extension — change it before producing macOS bundles.
 
 
 ## Remaining work before this could replace Electron
