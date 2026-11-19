@@ -4,7 +4,7 @@ All notable changes to **Poly Vault** are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com) and this project adheres to
 [Semantic Versioning](https://semver.org).
 
-## [Unreleased]
+## [0.4.3] — 2026-11-18
 
 ### Added
 
@@ -30,6 +30,12 @@ All notable changes to **Poly Vault** are documented here. Format follows
   tools, guards, session tracking and `/api/agents` route, covered by unit and
   HTTP tests.
 
+### Changed
+
+- **Packaging always starts clean** — every `pack`/`dist` script now wipes
+  `dist/` first (`tools/clean-dist.js`), so a new installer can never ship
+  alongside a stale blockmap or an old `win-unpacked` folder.
+
 ### Fixed
 
 - **Agents and Tags popovers were layered under the asset grid.** The toolbar's
@@ -38,6 +44,14 @@ All notable changes to **Poly Vault** are documented here. Format follows
   an explicit stacking layer, popovers use an opaque `--bg-pop` surface (no more
   cards bleeding through), and the e2e probe asserts the panel is the topmost
   element at its centre.
+- **Failed Unity imports could not be retried and showed as imported.** The
+  Unity importer reported success even when zero files were copied, and both
+  bridges hid `failed` jobs from the Unity queue alongside `done` jobs. Failed
+  imports now report the real reason, stay in Unity's "Pending imports" list
+  with a **Retry** button, and package callbacks match jobs by package name so
+  an unrelated completed import cannot close someone else's job. `POST
+  /api/unity/import-jobs/{id}/retry` resets a job to `pending` in both the
+  Electron and Rust bridges.
 
 ## [0.4.2] — 2026-11-07
 

@@ -1,6 +1,6 @@
 [package]
 name = "poly-vault"
-version = "0.4.2"
+version = "0.4.3"
 description = "Local 3D/2D asset manager with a one-click pipeline into Unity 6"
 authors = ["Zeeshan Qaswar"]
 edition = "2021"

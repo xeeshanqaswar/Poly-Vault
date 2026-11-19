@@ -5,7 +5,7 @@ and its Unity 6 bridge. This is the authoritative reference for *what the
 product does*: full capability list, functional behaviours, API contracts,
 data shapes, and edge cases.
 
-**Product:** Poly Vault · **Version:** 0.4.2 · **Author:** Zeeshan Qaswar ·
+**Product:** Poly Vault · **Version:** 0.4.3 · **Author:** Zeeshan Qaswar ·
 **License:** MIT
 
 Contents:
@@ -244,9 +244,10 @@ RequestBody cap: **2 MB**.
 | POST | `/api/tags/apply` | Add/remove tags across many paths (`{ paths[], add[], remove[] }`) — used by cascade |
 | POST | `/api/import-job` | Queue a job |
 | GET | `/api/import-jobs` | All jobs (history + status) |
-| GET | `/api/unity/import-jobs` | Active (non-terminal) jobs — plugin poll target |
+| GET | `/api/unity/import-jobs` | Pending / processing / failed jobs — plugin poll target (failed stays retryable) |
 | POST | `/api/unity/import-jobs/{id}/complete` | Complete a job (`{ note }`) |
 | POST | `/api/unity/import-jobs/{id}/failed` | Fail a job (`{ note }`) |
+| POST | `/api/unity/import-jobs/{id}/retry` | Put a failed/completed job back in the pending queue (`{ note }`) |
 | GET | `/api/preview?path=…` | Preview image stream |
 | GET | `/api/agents` | Connected agent sessions + recent agent exports + MCP URL |
 | POST | `/mcp` | MCP Streamable HTTP endpoint for coding agents |
@@ -259,7 +260,7 @@ RequestBody cap: **2 MB**.
 {
   "ok": true,
   "name": "Poly Vault",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "time": "<ISO>",
   "libraryCount": 1,
   "libraries": [{ "id": "…", "name": "…", "path": "C:\\…" }],
@@ -378,16 +379,22 @@ The renderer polls this endpoint every 5 s for the **Agents** popover.
 
 ```
 pending ──► processing ──► done
-                 │
-                 └────────► failed
+                 │            │
+                 └──► failed ◄┘  (a later Unity failure overrides an early "done")
+                        │
+                        └──► /retry ──► pending
 ```
 
 1. Renderer `POST /api/import-job` (whitelist-checked folder).
 2. Job saved as `pending`; badge appears on the card + detail.
 3. Plugin polls `GET /api/unity/import-jobs` (5 s default) and marks
    `processing` while importing.
-4. Plugin calls `/complete` or `/failed` (+ note).
-5. Renderer polls `GET /api/import-jobs` (5 s) and re-paints only on change.
+4. Plugin calls `/complete` or `/failed` (+ note). Unity reports `failed` when
+   zero files were copied, a copy failed, or a `.unitypackage` import was
+   cancelled/failed — an empty success is never recorded as `done`.
+5. Failed jobs remain in the Unity queue with a **Retry** button. `/retry`
+   resets the same job to `pending`; the renderer can also queue a fresh job.
+6. Renderer polls `GET /api/import-jobs` (5 s) and re-paints only on change.
 
 ```jsonc
 { "id": "<uuid>", "assetId": "…", "assetName": "Chair", "category": "3d",
@@ -397,7 +404,9 @@ pending ──► processing ──► done
   "createdAt": "<ISO>", "updatedAt": "<ISO>", "note": null }
 ```
 
-Terminal states: `done`, `failed`. Jobs persist to `asset-vault-jobs.json`.
+`done` is the only terminal state; `failed` is retryable (though it is pruned
+with completed jobs after 200 terminal jobs). Jobs persist to
+`asset-vault-jobs.json`.
 
 ## 11. Unity Editor plugin
 

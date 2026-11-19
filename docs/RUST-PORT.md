@@ -70,8 +70,8 @@ Implemented with axum, same routes, payloads, guards, and status codes:
 | `GET /api/preview` | allowlisted extensions, ETag/304, Last-Modified, streamed file |
 | `POST /api/import-job` | creates pending job, prunes to 200 terminal jobs |
 | `GET /api/import-jobs` | full queue for the UI |
-| `GET /api/unity/import-jobs` | active queue for the Unity plugin + `unitySeenAt` |
-| `POST /api/unity/import-jobs/:id/:action` | complete/failed/processing + note |
+| `GET /api/unity/import-jobs` | pending/processing/failed queue for the Unity plugin + `unitySeenAt` (failed stays retryable) |
+| `POST /api/unity/import-jobs/:id/:action` | complete/failed/processing/retry + note |
 | `GET /api/agents` | connected agent sessions, recent exports, MCP URL |
 | `POST/DELETE /mcp` | MCP Streamable HTTP (`2025-06-18`), five tools, session header |
 
@@ -154,7 +154,7 @@ renderer only refreshes job state on a 5 s poll, so the suite failed on `main`
 ```powershell
 cargo build --release                        # src-tauri\target\release\poly-vault.exe            (~16 MB)
 npx @tauri-apps/cli@2 build --bundles nsis   # src-tauri\target\release\bundle\nsis\
-                                             #   Poly Vault_0.4.2_x64-setup.exe                  (~4.5 MB)
+                                             #   Poly Vault_0.4.3_x64-setup.exe                  (~4.5 MB)
 ```
 
 Both are unsigned, and the Tauri build is not wired into CI yet. The CLI warns

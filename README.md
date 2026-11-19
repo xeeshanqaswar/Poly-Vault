@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/xeeshanqaswar/Poly-Vault"><img src="https://img.shields.io/badge/project-Poly%20Vault-1f6feb" alt="Project"></a>
-  <a href="https://github.com/xeeshanqaswar/Poly-Vault/releases"><img src="https://img.shields.io/badge/version-0.4.2-1f6feb" alt="Version"></a>
+  <a href="https://github.com/xeeshanqaswar/Poly-Vault/releases"><img src="https://img.shields.io/badge/version-0.4.3-1f6feb" alt="Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-793700" alt="Platforms">
   <a href="https://github.com/xeeshanqaswar/Poly-Vault/actions"><img src="https://img.shields.io/badge/CI-GitHub%20Actions-2b7489" alt="CI"></a>
@@ -73,9 +73,9 @@ original files are never modified.
 
 | Platform | Download | Install |
 | --- | --- | --- |
-| **Windows** | `PolyVault-Setup-0.4.2.exe` | Run the installer. |
-| **Linux** | `PolyVault-0.4.2-x86_64.AppImage` or `PolyVault-0.4.2-amd64.deb` | `chmod +x` and run it, or `sudo dpkg -i`. |
-| **macOS** | `PolyVault-0.4.2-arm64.dmg` (or `x64.dmg`) | Open the DMG and drag the app to Applications. |
+| **Windows** | `PolyVault-Setup-0.4.3.exe` | Run the installer. |
+| **Linux** | `PolyVault-0.4.3-x86_64.AppImage` or `PolyVault-0.4.3-amd64.deb` | `chmod +x` and run it, or `sudo dpkg -i`. |
+| **macOS** | `PolyVault-0.4.3-arm64.dmg` (or `x64.dmg`) | Open the DMG and drag the app to Applications. |
 
 Grab them from the [releases page](https://github.com/xeeshanqaswar/Poly-Vault/releases).
 macOS DMGs are produced by our build servers; Linux and Windows builds are
@@ -94,7 +94,7 @@ optional and takes about a minute.
 
 1. **Add the Poly Vault add-on to your project** — download it from the
    [releases page](https://github.com/xeeshanqaswar/Poly-Vault/releases):
-   `PolyVault-Unity-0.4.2.zip` (or `.tgz`). In Unity, open **Window → Package
+   `PolyVault-Unity-0.4.3.zip` (or `.tgz`). In Unity, open **Window → Package
    Manager → + → Add package from disk** and pick the `package.json` inside.
 2. Open **Window → Poly Vault** in Unity — that's it, nothing else to configure.
 3. From the desktop app, press **Import to Unity** on any asset. It is copied

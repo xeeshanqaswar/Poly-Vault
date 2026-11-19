@@ -460,7 +460,7 @@ function startBridge({ host = '127.0.0.1', port = 7100, getState, tags, meta, on
 
       if (req.method === 'GET' && route === '/api/unity/import-jobs') {
         lastUnitySeen = Date.now();
-        const active = state.jobs.filter((j) => !TERMINAL_STATES.has(j.status));
+        const active = state.jobs.filter((j) => j.status !== JOB_STATES.DONE);
         sendJson(res, 200, { ok: true, jobs: active });
         return;
       }
@@ -472,7 +472,7 @@ function startBridge({ host = '127.0.0.1', port = 7100, getState, tags, meta, on
         return;
       }
 
-      const jobStatusMatch = route.match(/^\/api\/unity\/import-jobs\/([^/]+)\/(complete|failed|processing)$/);
+      const jobStatusMatch = route.match(/^\/api\/unity\/import-jobs\/([^/]+)\/(complete|failed|processing|retry)$/);
       if (req.method === 'POST' && jobStatusMatch) {
         lastUnitySeen = Date.now();
         const [, jobId, action] = jobStatusMatch;
@@ -486,7 +486,9 @@ function startBridge({ host = '127.0.0.1', port = 7100, getState, tags, meta, on
           ? JOB_STATES.DONE
           : action === 'failed'
             ? JOB_STATES.FAILED
-            : JOB_STATES.PROCESSING;
+            : action === 'retry'
+              ? JOB_STATES.PENDING
+              : JOB_STATES.PROCESSING;
         job.note = body.note || '';
         job.updatedAt = new Date().toISOString();
         const pruned = pruneJobs(state.jobs);

@@ -466,7 +466,7 @@ async fn unity_jobs(State(state): State<Arc<AppState>>) -> Response {
         .into_iter()
         .filter(|j| {
             let status = j.get("status").and_then(Value::as_str).unwrap_or("");
-            status != "done" && status != "failed"
+            status != "done"
         })
         .collect();
     json_res(StatusCode::OK, json!({ "ok": true, "jobs": jobs }))
@@ -483,7 +483,7 @@ async fn unity_job_status(
     AxumPath((job_id, action)): AxumPath<(String, String)>,
     body: axum::body::Bytes,
 ) -> Response {
-    if !matches!(action.as_str(), "complete" | "failed" | "processing") {
+    if !matches!(action.as_str(), "complete" | "failed" | "processing" | "retry") {
         return json_res(
             StatusCode::NOT_FOUND,
             json!({ "ok": false, "error": "not found" }),
@@ -494,6 +494,7 @@ async fn unity_job_status(
     let status = match action.as_str() {
         "complete" => "done",
         "failed" => "failed",
+        "retry" => "pending",
         _ => "processing",
     };
     let note = serde_json::from_slice::<NoteBody>(&body)
@@ -919,6 +920,62 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(active["jobs"].as_array().unwrap().len(), 1);
+
+        let job_id = job["job"]["id"].as_str().unwrap();
+        let failed: Value = client
+            .post(format!("{base}/api/unity/import-jobs/{job_id}/failed"))
+            .json(&json!({ "note": "Unity import failed" }))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        assert_eq!(failed["job"]["status"], "failed");
+        assert_eq!(failed["job"]["note"], "Unity import failed");
+
+        let retryable: Value = client
+            .get(format!("{base}/api/unity/import-jobs"))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        assert_eq!(retryable["jobs"].as_array().unwrap().len(), 1, "failed jobs stay retryable in Unity");
+
+        let retried: Value = client
+            .post(format!("{base}/api/unity/import-jobs/{job_id}/retry"))
+            .json(&json!({ "note": "retry requested" }))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        assert_eq!(retried["job"]["status"], "pending");
+        assert_eq!(retried["job"]["note"], "retry requested");
+
+        let completed: Value = client
+            .post(format!("{base}/api/unity/import-jobs/{job_id}/complete"))
+            .json(&json!({ "note": "imported" }))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        assert_eq!(completed["job"]["status"], "done");
+        let done_only: Value = client
+            .get(format!("{base}/api/unity/import-jobs"))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        assert_eq!(done_only["jobs"].as_array().unwrap().len(), 0, "completed jobs leave the Unity queue");
+
         let after: Value = client
             .get(format!("{base}/api/status"))
             .send()

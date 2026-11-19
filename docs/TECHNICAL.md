@@ -235,9 +235,10 @@ every visible thumbnail.
 | POST | `/api/tags/apply` | Add/remove tags across paths `{ paths[], add[], remove[] }` — one call for a cascade |
 | POST | `/api/import-job` | Queue an asset import `{ assetId, assetName, category, libraryName, assetFolder, tags, importables }` |
 | GET | `/api/import-jobs` | All jobs (history + status) |
-| GET | `/api/unity/import-jobs` | Active (non-terminal) jobs — what the plugin polls |
+| GET | `/api/unity/import-jobs` | Pending/processing/failed jobs — what the plugin polls |
 | POST | `/api/unity/import-jobs/{id}/complete` | Complete a job (`{ note }`) |
 | POST | `/api/unity/import-jobs/{id}/failed` | Fail a job (`{ note }`) |
+| POST | `/api/unity/import-jobs/{id}/retry` | Reset a job to `pending` for another attempt |
 | GET | `/api/preview?path=…` | Preview image stream (whitelisted extensions + library roots only) |
 | GET | `/api/agents` | Agent sessions + recent exports + MCP URL |
 | POST | `/mcp` | MCP Streamable HTTP for coding agents |
@@ -308,8 +309,10 @@ created inside `startBridge()` with the same fresh-scan helper as
 status ∈ pending | processing | done | failed
 ```
 
-Terminal states are `done` / `failed`. Jobs live in-memory on the bridge and
-are persisted to `asset-vault-jobs.json` via `onJobsChanged`.
+Only `done` is terminal; `failed` stays in the Unity queue so the same job can
+be retried (`/retry` → `pending`, or a later `/processing` from the plugin).
+Jobs live in-memory on the bridge and are persisted to `asset-vault-jobs.json`
+via `onJobsChanged`.
 
 ### `__diag` (test automation)
 
@@ -341,8 +344,18 @@ Response metrics include `libs`, `treeRows`, `cards`, `dot`,
    and in the details panel.
 3. Unity plugin polls `GET /api/unity/import-jobs` (interval default 5 s) and
    sets the job `processing` while importing.
-4. On success the plugin calls `/complete` (or `/failed` with a note).
-5. Renderer polls `GET /api/import-jobs` every 5 s and re-paints *only* when
+4. `AssetVaultImporter.TryImport` reports `processing` while a Unity package
+   dialog is open, then `/complete` only when at least one file was actually
+   copied. Missing source files or a
+   failed copy report `/failed` with the reason; a cancelled/failed
+   `.unitypackage` import reports `/failed` in its Unity callback and overrides
+   an earlier success. Package callbacks match the job by package name only —
+   no arbitrary fallback — so unrelated Unity imports cannot complete someone
+   else's job.
+5. Failed jobs stay visible in Unity's "Pending imports" list with a **Retry**
+   button (the note is shown as a warning). `/retry` resets the job to
+   `pending`; the desktop's "Retry import to Unity" creates a fresh job.
+6. Renderer polls `GET /api/import-jobs` every 5 s and re-paints *only* when
    a job's status or `updatedAt` changes.
 
 Plugin import targets:

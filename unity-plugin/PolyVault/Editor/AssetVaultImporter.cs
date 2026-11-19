@@ -17,7 +17,10 @@ namespace AssetVault.EditorTools
         public const string ImportRoot = "Assets/PolyVaultImports";
 
         private static readonly HashSet<string> InFlight = new HashSet<string>();
+        private static readonly HashSet<string> ReportedDone = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, ImportJobDto> PendingPackageJobs =
+            new Dictionary<string, ImportJobDto>(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, ImportJobDto> KnownPackageJobs =
             new Dictionary<string, ImportJobDto>(StringComparer.OrdinalIgnoreCase);
 
         static AssetVaultImporter()
@@ -33,103 +36,93 @@ namespace AssetVault.EditorTools
         {
             if (string.IsNullOrEmpty(jobId)) return;
             InFlight.Remove(jobId);
-            var keys = new List<string>();
-            foreach (var kvp in PendingPackageJobs)
-            {
-                if (kvp.Value != null && kvp.Value.id == jobId) keys.Add(kvp.Key);
-            }
-            foreach (var k in keys) PendingPackageJobs.Remove(k);
+            ReportedDone.Remove(jobId);
+            RemoveJobFromPendingByKey(PendingPackageJobs, jobId);
+            RemoveJobFromPendingByKey(KnownPackageJobs, jobId);
         }
 
         private static void RegisterPendingPackage(ImportableDto item, ImportJobDto job)
         {
             if (item == null || job == null) return;
             string key1 = Path.GetFileNameWithoutExtension(item.path);
-            if (!string.IsNullOrEmpty(key1)) PendingPackageJobs[key1] = job;
+            if (!string.IsNullOrEmpty(key1))
+            {
+                PendingPackageJobs[key1] = job;
+                KnownPackageJobs[key1] = job;
+            }
             if (!string.IsNullOrEmpty(item.name))
             {
                 PendingPackageJobs[item.name] = job;
+                KnownPackageJobs[item.name] = job;
                 string key2 = Path.GetFileNameWithoutExtension(item.name);
-                if (!string.IsNullOrEmpty(key2)) PendingPackageJobs[key2] = job;
+                if (!string.IsNullOrEmpty(key2))
+                {
+                    PendingPackageJobs[key2] = job;
+                    KnownPackageJobs[key2] = job;
+                }
             }
         }
 
-        private static bool TryPopPackageJob(string packageName, out ImportJobDto job)
+        private static bool TryGetPackageJob(string packageName, out ImportJobDto job)
         {
             job = null;
-            if (PendingPackageJobs.Count == 0) return false;
-
-            if (!string.IsNullOrEmpty(packageName))
-            {
-                if (PendingPackageJobs.TryGetValue(packageName, out job))
-                {
-                    RemoveJobFromPending(job);
-                    InFlight.Remove(job.id);
-                    return true;
-                }
-                string clean = Path.GetFileNameWithoutExtension(packageName);
-                if (PendingPackageJobs.TryGetValue(clean, out job))
-                {
-                    RemoveJobFromPending(job);
-                    InFlight.Remove(job.id);
-                    return true;
-                }
-            }
-
-            if (PendingPackageJobs.Count >= 1)
-            {
-                using (var enumerator = PendingPackageJobs.Values.GetEnumerator())
-                {
-                    if (enumerator.MoveNext())
-                    {
-                        job = enumerator.Current;
-                        RemoveJobFromPending(job);
-                        InFlight.Remove(job.id);
-                        return true;
-                    }
-                }
-            }
-
-            return false;
+            if (string.IsNullOrEmpty(packageName) || KnownPackageJobs.Count == 0) return false;
+            if (KnownPackageJobs.TryGetValue(packageName, out job)) return true;
+            string clean = Path.GetFileNameWithoutExtension(packageName);
+            return !string.IsNullOrEmpty(clean) && KnownPackageJobs.TryGetValue(clean, out job);
         }
 
-        private static void RemoveJobFromPending(ImportJobDto job)
+        private static void RemoveJobFromPendingByKey(Dictionary<string, ImportJobDto> map, string jobId)
+        {
+            var keys = new List<string>();
+            foreach (var kvp in map)
+            {
+                if (kvp.Value != null && kvp.Value.id == jobId) keys.Add(kvp.Key);
+            }
+            foreach (var k in keys) map.Remove(k);
+        }
+
+        private static void FinishPackageJob(ImportJobDto job)
         {
             if (job == null) return;
-            var keys = new List<string>();
-            foreach (var kvp in PendingPackageJobs)
-            {
-                if (kvp.Value != null && kvp.Value.id == job.id) keys.Add(kvp.Key);
-            }
-            foreach (var k in keys) PendingPackageJobs.Remove(k);
+            RemoveJobFromPendingByKey(PendingPackageJobs, job.id);
+            InFlight.Remove(job.id);
         }
 
         private static void OnPackageImportCompleted(string packageName)
         {
-            if (TryPopPackageJob(packageName, out var job))
+            if (TryGetPackageJob(packageName, out var job))
             {
+                if (ReportedDone.Contains(job.id)) return;
+                ReportedDone.Add(job.id);
                 Debug.Log($"[Poly Vault] Package '{packageName}' imported successfully.");
                 ReportJobResult(job, true, $"Imported package {packageName}.");
+                FinishPackageJob(job);
                 AssetVaultQueue.PollNow();
             }
+            else Debug.LogWarning($"[Poly Vault] Unity reported '{packageName}' complete, but no Poly Vault import is waiting for it.");
         }
 
         private static void OnPackageImportCancelled(string packageName)
         {
-            if (TryPopPackageJob(packageName, out var job))
+            if (TryGetPackageJob(packageName, out var job))
             {
+                ReportedDone.Remove(job.id);
                 Debug.LogWarning($"[Poly Vault] Package '{packageName}' import was cancelled in Unity.");
                 ReportJobResult(job, false, $"Package '{packageName}' import cancelled in Unity.");
+                FinishPackageJob(job);
                 AssetVaultQueue.PollNow();
             }
         }
 
         private static void OnPackageImportFailed(string packageName, string errorMessage)
         {
-            if (TryPopPackageJob(packageName, out var job))
+            if (TryGetPackageJob(packageName, out var job))
             {
+                ReportedDone.Remove(job.id);
                 Debug.LogError($"[Poly Vault] Package '{packageName}' import failed: {errorMessage}");
                 ReportJobResult(job, false, $"Package '{packageName}' import failed: {errorMessage}");
+                FinishPackageJob(job);
                 AssetVaultQueue.PollNow();
             }
         }
@@ -198,10 +191,12 @@ namespace AssetVault.EditorTools
             }
 
             InFlight.Add(job.id);
+            ReportedDone.Remove(job.id);
             try
             {
                 int imported = 0;
                 int skippedPackages = 0;
+                int failedItems = 0;
                 bool hasInteractivePackage = false;
 
                 string destAssetRoot = Path.Combine(
@@ -237,6 +232,7 @@ namespace AssetVault.EditorTools
                         }
                         else
                         {
+                            failedItems++;
                             log?.Invoke($"Missing file: {item.path}");
                         }
                         continue;
@@ -244,6 +240,7 @@ namespace AssetVault.EditorTools
 
                     if (!File.Exists(item.path))
                     {
+                        failedItems++;
                         log?.Invoke($"Missing file: {item.path}");
                         continue;
                     }
@@ -260,6 +257,7 @@ namespace AssetVault.EditorTools
                     }
                     catch (Exception e)
                     {
+                        failedItems++;
                         log?.Invoke($"Copy failed for {item.name}: {e.Message}");
                     }
                 }
@@ -281,6 +279,16 @@ namespace AssetVault.EditorTools
                 }
 
                 InFlight.Remove(job.id);
+                if (imported == 0 || failedItems > 0)
+                {
+                    string msg = imported == 0
+                        ? "Nothing was imported: no source files were found or all copies failed."
+                        : $"Imported {imported} file(s), but {failedItems} failed.";
+                    ReportJobResult(job, false, msg);
+                    finished?.Invoke(msg, false);
+                    return true;
+                }
+
                 ReportJobResult(job, true, $"Imported {imported} file(s).");
                 finished?.Invoke($"Imported {imported} file(s).", true);
                 return true;

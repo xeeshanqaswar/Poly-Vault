@@ -125,6 +125,12 @@ namespace AssetVault.EditorTools
                     : "queued " + job.createdAt.Replace('T', ' ');
                 EditorGUILayout.LabelField(meta, EditorStyles.miniLabel);
 
+                bool failed = string.Equals(job.status, "failed", StringComparison.OrdinalIgnoreCase);
+                if (failed && !string.IsNullOrEmpty(job.note))
+                {
+                    EditorGUILayout.HelpBox(job.note, MessageType.Warning);
+                }
+
                 var imp = job.importables;
                 if (imp != null && imp.Count > 0)
                 {
@@ -148,7 +154,10 @@ namespace AssetVault.EditorTools
                 {
                     bool inFlight = AssetVaultImporter.IsInFlight(job.id) || string.Equals(job.status, "processing", StringComparison.OrdinalIgnoreCase);
                     GUI.enabled = !inFlight;
-                    if (GUILayout.Button(inFlight ? $"Importing “{job.assetName}”..." : $"Import “{job.assetName}” now", GUILayout.MinWidth(160)))
+                    string buttonLabel = inFlight
+                        ? $"Importing “{job.assetName}”..."
+                        : failed ? $"Retry “{job.assetName}” now" : $"Import “{job.assetName}” now";
+                    if (GUILayout.Button(buttonLabel, GUILayout.MinWidth(160)))
                     {
                         AssetVaultImporter.TryImport(job, interactive: true,
                             log: msg => Debug.Log($"[Poly Vault] {msg}"),

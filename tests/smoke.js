@@ -406,6 +406,25 @@ assert.deepStrictEqual(pruned.map((j) => j.id), ['2', '3', '4', '5'], 'retains n
   assert.strictEqual(activeProc.jobs.length, 1);
   assert.strictEqual(activeProc.jobs[0].status, 'processing');
 
+  const failed = await fetch(`${base}/api/unity/import-jobs/${job.id}/failed`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ note: 'Unity import failed' }),
+  });
+  assert.strictEqual(failed.status, 200);
+  const activeFailed = await (await fetch(`${base}/api/unity/import-jobs`)).json();
+  assert.strictEqual(activeFailed.jobs.length, 1, 'failed jobs stay visible so Unity can retry them');
+  assert.strictEqual(activeFailed.jobs[0].status, 'failed');
+
+  const retried = await fetch(`${base}/api/unity/import-jobs/${job.id}/retry`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ note: 'retry requested' }),
+  });
+  assert.strictEqual(retried.status, 200);
+  const activeRetry = await (await fetch(`${base}/api/unity/import-jobs`)).json();
+  assert.strictEqual(activeRetry.jobs[0].status, 'pending', 'retry puts the same job back in the queue');
+
   const done = await fetch(`${base}/api/unity/import-jobs/${job.id}/complete`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
